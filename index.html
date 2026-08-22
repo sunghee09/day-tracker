@@ -61,7 +61,7 @@
     display:flex;
     justify-content:space-between;
     align-items:center;
-    margin-bottom:24px;
+    margin-bottom:20px;
     min-height:20px;
   }
   .status{
@@ -77,6 +77,22 @@
     text-decoration:underline;
     padding:0;
   }
+  .tabs{ display:flex; gap:8px; margin-bottom:12px; }
+  .tab{
+    flex:1;
+    padding:10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    font-family:inherit;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .tab[data-active="true"]{ background:var(--card); color:var(--text); }
   .card{
     background:var(--card);
     border:1px solid var(--border);
@@ -91,6 +107,27 @@
   .legend-label{ font-size:12px; color:var(--text-dim); }
   .legend-value{ font-size:15px; font-weight:600; margin-top:4px; }
   .footnote{ font-size:11px; color:var(--text-faint); margin-top:16px; text-align:center; }
+  .month-nav{ display:flex; align-items:center; justify-content:space-between; padding:2px 0 16px; }
+  .month-arrow{
+    width:34px; height:34px;
+    border-radius:9px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    font-size:18px;
+    line-height:1;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .month-label{ font-size:15px; font-weight:600; }
+  .month-sub{ text-align:center; font-size:11px; color:var(--text-faint); padding-bottom:16px; }
+  .history-empty{ padding:28px 4px 20px; text-align:center; color:var(--text-faint); font-size:13px; }
+  .history-table{ width:100%; border-collapse:collapse; }
+  .history-table th{ text-align:right; font-size:11px; color:var(--text-faint); font-weight:600; padding:0 4px 10px; text-transform:uppercase; letter-spacing:0.4px; }
+  .history-table th:first-child{ text-align:left; }
+  .history-table td{ font-size:13px; padding:11px 4px; border-top:1px solid var(--border); text-align:right; }
+  .history-table td:first-child{ text-align:left; color:var(--text); font-weight:600; }
 </style>
 </head>
 <body>
@@ -108,11 +145,20 @@
     <button class="undo" id="undoBtn" style="display:none;">undo last</button>
   </div>
 
-  <div class="card">
+  <div class="tabs">
+    <button class="tab" id="tabToday" data-active="true">Today</button>
+    <button class="tab" id="tabHistory" data-active="false">History</button>
+  </div>
+
+  <div class="card" id="todayCard">
     <div class="chart-wrap">
       <svg id="pie" viewBox="0 0 200 200" width="220" height="220"></svg>
     </div>
     <div class="legend" id="legend"></div>
+  </div>
+
+  <div class="card" id="historyCard" style="display:none;">
+    <div id="historyBody"></div>
   </div>
 
   <div class="footnote">Resets at midnight. "Other" is whatever's left of the 24 hours.</div>
@@ -148,6 +194,9 @@
 
   var sessions = loadSessions();
   var active = loadActive();
+  var currentView = 'today';
+  var viewMonth = null; // set after helpers are defined
+  var historyDirty = true;
 
   function startOfToday(){
     var d = new Date();
@@ -196,6 +245,55 @@
     return { work: work, sleep: sleep, other: other };
   }
 
+  // ---- history: groups every past session into calendar days, splitting
+  // any session that crosses midnight across both days it touches ----
+  function dateKeyForTime(ms){
+    var d = new Date(ms);
+    d.setHours(0,0,0,0);
+    var y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return y + '-' + m + '-' + day;
+  }
+  function dayBoundsForKey(key){
+    var p = key.split('-').map(Number);
+    var start = new Date(p[0], p[1]-1, p[2], 0,0,0,0).getTime();
+    return [start, start + 24*3600*1000];
+  }
+  function formatDateKey(key){
+    var p = key.split('-').map(Number);
+    var d = new Date(p[0], p[1]-1, p[2]);
+    return d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+  }
+
+  function computeHistory(){
+    var byDay = {};
+    function addChunk(type, s, e){
+      var cursor = s, guard = 0;
+      while(cursor < e && guard < 60){
+        guard++;
+        var key = dateKeyForTime(cursor);
+        var bounds = dayBoundsForKey(key);
+        var chunkEnd = Math.min(e, bounds[1]);
+        var dur = chunkEnd - cursor;
+        if(!byDay[key]) byDay[key] = { work:0, sleep:0 };
+        if(type === 'work') byDay[key].work += dur;
+        else if(type === 'sleep') byDay[key].sleep += dur;
+        cursor = chunkEnd;
+      }
+    }
+    sessions.forEach(function(s){
+      addChunk(s.type, new Date(s.start).getTime(), new Date(s.end).getTime());
+    });
+    var todayKeyStr = dateKeyForTime(Date.now());
+    return Object.keys(byDay)
+      .filter(function(k){ return k !== todayKeyStr; })
+      .sort().reverse()
+      .map(function(k){
+        var w = byDay[k].work, s = byDay[k].sleep;
+        var o = Math.max(0, 24*3600*1000 - w - s);
+        return { key:k, work:w, sleep:s, other:o };
+      });
+  }
+
   function polarToCartesian(cx, cy, r, angleDeg){
     var rad = (angleDeg - 90) * Math.PI / 180;
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
@@ -223,8 +321,107 @@
   var pieSvg = document.getElementById('pie');
   var legend = document.getElementById('legend');
   var dateLabel = document.getElementById('dateLabel');
+  var tabToday = document.getElementById('tabToday');
+  var tabHistory = document.getElementById('tabHistory');
+  var todayCard = document.getElementById('todayCard');
+  var historyCard = document.getElementById('historyCard');
+  var historyBody = document.getElementById('historyBody');
 
   dateLabel.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
+
+  function monthKeyOf(dayKey){ return dayKey.slice(0,7); }
+
+  function formatMonthKey(mKey){
+    var p = mKey.split('-').map(Number);
+    return new Date(p[0], p[1]-1, 1).toLocaleDateString(undefined, { month:'long', year:'numeric' });
+  }
+
+  function shiftMonth(mKey, delta){
+    var p = mKey.split('-').map(Number);
+    var d = new Date(p[0], p[1]-1 + delta, 1);
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  function currentMonthKey(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+  }
+
+  function renderHistory(){
+    var rows = computeHistory();
+    if(rows.length === 0){
+      historyBody.innerHTML = '<div class="history-empty">No past days yet. Come back tomorrow.</div>';
+      return;
+    }
+
+    var monthRows = rows.filter(function(r){ return monthKeyOf(r.key) === viewMonth; });
+
+    // month totals across only the days that have logged data
+    var mWork = 0, mSleep = 0;
+    monthRows.forEach(function(r){ mWork += r.work; mSleep += r.sleep; });
+    var mOther = Math.max(0, monthRows.length * 24*3600*1000 - mWork - mSleep);
+
+    var order = ['work','sleep','other'];
+    var vals = { work:mWork, sleep:mSleep, other:mOther };
+    var totalMs = mWork + mSleep + mOther;
+
+    var paths = '';
+    var angle = 0;
+    var gap = 2;
+    order.forEach(function(key){
+      var v = vals[key];
+      if(v <= 0 || totalMs <= 0) return;
+      var sweep = (v / totalMs) * 360;
+      var start = angle + gap/2;
+      var end = angle + sweep - gap/2;
+      if(end > start){
+        paths += '<path d="' + donutPath(100,100,85,55,start,end) + '" fill="' + COLORS[key] + '"></path>';
+      }
+      angle += sweep;
+    });
+
+    var nav = '<div class="month-nav">' +
+      '<button class="month-arrow" id="prevMonth">\u2039</button>' +
+      '<div class="month-label">' + formatMonthKey(viewMonth) + '</div>' +
+      '<button class="month-arrow" id="nextMonth">\u203A</button>' +
+      '</div>';
+
+    if(monthRows.length === 0){
+      historyBody.innerHTML = nav + '<div class="history-empty">Nothing logged this month.</div>';
+      wireMonthNav();
+      return;
+    }
+
+    var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + paths + '</svg></div>';
+
+    var legendHtml = '<div class="legend">' + order.map(function(key){
+      return '<div class="legend-item">' +
+        '<div class="legend-dot-row"><span class="dot" style="background:' + COLORS[key] + '"></span>' +
+        '<span class="legend-label">' + LABELS[key] + '</span></div>' +
+        '<div class="legend-value">' + formatHM(vals[key]) + '</div>' +
+        '</div>';
+    }).join('') + '</div>';
+
+    var dayCount = '<div class="month-sub">' + monthRows.length + (monthRows.length === 1 ? ' day' : ' days') + ' logged</div>';
+
+    var body = monthRows.map(function(r){
+      return '<tr><td>' + formatDateKey(r.key) + '</td>' +
+        '<td>' + formatHM(r.work) + '</td>' +
+        '<td>' + formatHM(r.sleep) + '</td>' +
+        '<td>' + formatHM(r.other) + '</td></tr>';
+    }).join('');
+    var table = '<table class="history-table"><thead><tr><th>Date</th><th>Work</th><th>Sleep</th><th>Other</th></tr></thead><tbody>' + body + '</tbody></table>';
+
+    historyBody.innerHTML = nav + chart + legendHtml + dayCount + table;
+    wireMonthNav();
+  }
+
+  function wireMonthNav(){
+    var prev = document.getElementById('prevMonth');
+    var next = document.getElementById('nextMonth');
+    if(prev) prev.addEventListener('click', function(){ viewMonth = shiftMonth(viewMonth, -1); historyDirty = false; renderHistory(); });
+    if(next) next.addEventListener('click', function(){ viewMonth = shiftMonth(viewMonth, 1); historyDirty = false; renderHistory(); });
+  }
 
   function render(){
     workBtn.setAttribute('data-active', String(!!(active && active.type === 'work')));
@@ -242,6 +439,16 @@
     }
 
     undoBtn.style.display = (sessions.length > 0 || active) ? 'block' : 'none';
+
+    tabToday.setAttribute('data-active', String(currentView === 'today'));
+    tabHistory.setAttribute('data-active', String(currentView === 'history'));
+    todayCard.style.display = currentView === 'today' ? 'block' : 'none';
+    historyCard.style.display = currentView === 'history' ? 'block' : 'none';
+
+    if(currentView === 'history'){
+      if(historyDirty){ historyDirty = false; renderHistory(); }
+      return;
+    }
 
     var totals = computeTodayTotals();
     var order = ['work','sleep','other'];
@@ -274,6 +481,7 @@
   }
 
   function toggle(type){
+    historyDirty = true;
     var nowIso = new Date().toISOString();
     if(active && active.type === type){
       sessions.push({ type: type, start: active.start, end: nowIso });
@@ -293,6 +501,7 @@
   }
 
   function undoLast(){
+    historyDirty = true;
     if(active){
       active = null;
       saveActive(null);
@@ -306,6 +515,10 @@
   workBtn.addEventListener('click', function(){ toggle('work'); });
   sleepBtn.addEventListener('click', function(){ toggle('sleep'); });
   undoBtn.addEventListener('click', undoLast);
+  tabToday.addEventListener('click', function(){ currentView = 'today'; render(); });
+  tabHistory.addEventListener('click', function(){ currentView = 'history'; historyDirty = true; render(); });
+
+  viewMonth = currentMonthKey();
 
   setInterval(function(){ render(); }, 1000);
   render();

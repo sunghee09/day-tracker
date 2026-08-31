@@ -153,6 +153,51 @@
   .history-table td{ font-size:12px; padding:10px 3px; border-top:1px solid var(--border); text-align:right; }
   .history-table td:first-child{ text-align:left; color:var(--text); font-weight:600; }
   .money-table td:nth-child(2){ text-align:left; color:var(--text-dim); font-weight:400; }
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,11,14,0.7);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+    z-index:1000;
+  }
+  .modal-box{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:20px;
+    width:100%;
+    max-width:340px;
+    box-sizing:border-box;
+  }
+  .modal-title{ font-size:16px; font-weight:700; margin-bottom:14px; }
+  .modal-input{
+    width:100%;
+    padding:14px;
+    border-radius:12px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    color:var(--text);
+    font-size:18px;
+    font-family:inherit;
+    box-sizing:border-box;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .modal-actions{ display:flex; gap:10px; margin-top:16px; }
+  .modal-btn-secondary, .modal-btn-primary{
+    flex:1;
+    padding:12px;
+    border-radius:12px;
+    font-size:15px;
+    font-weight:600;
+    font-family:inherit;
+    cursor:pointer;
+    border:1px solid var(--border);
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .modal-btn-secondary{ background:transparent; color:var(--text-dim); }
+  .modal-btn-primary{ background:var(--text); color:var(--bg); border-color:var(--text); }
 </style>
 </head>
 <body>
@@ -209,6 +254,18 @@
     </div>
 
     <div class="card" id="moneyCard"></div>
+  </div>
+
+  <div class="modal-overlay" id="expenseModalOverlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-title" id="expenseModalTitle">Category</div>
+      <input class="modal-input" id="expenseAmountInput" type="number" inputmode="decimal" min="0" placeholder="0">
+      <button class="btn btn-dashed" id="expenseScanBtn" style="margin:12px 0 0; width:100%;">📷 Take a pic or choose from gallery</button>
+      <div class="modal-actions">
+        <button class="modal-btn-secondary" id="expenseCancelBtn">Cancel</button>
+        <button class="modal-btn-primary" id="expenseSaveBtn">Add</button>
+      </div>
+    </div>
   </div>
 
   <div class="footnote" id="footnote"></div>
@@ -315,7 +372,7 @@
   var expenses = loadExpenses();
   var moneyCategories = loadMoneyCategories();
   var editingMoney = false;
-  var pendingCategoryForScan = null;
+  var activeExpenseCategory = null;
   syncMoneyCategoryLookups();
   var mode = 'time';
   var currentView = 'today';
@@ -538,6 +595,12 @@
   var moneyButtonsEl = document.getElementById('moneyButtons');
   var editCategoriesBtn = document.getElementById('editCategoriesBtn');
   var scanFileInput = document.getElementById('scanFileInput');
+  var expenseModalOverlay = document.getElementById('expenseModalOverlay');
+  var expenseModalTitle = document.getElementById('expenseModalTitle');
+  var expenseAmountInput = document.getElementById('expenseAmountInput');
+  var expenseScanBtn = document.getElementById('expenseScanBtn');
+  var expenseCancelBtn = document.getElementById('expenseCancelBtn');
+  var expenseSaveBtn = document.getElementById('expenseSaveBtn');
   var footnote = document.getElementById('footnote');
 
   var BUTTONS = TYPES.map(function(type){
@@ -729,7 +792,7 @@
         btn.addEventListener('click', function(){
           var id = btn.getAttribute('data-cat-id');
           if(editingMoney) editCategory(id);
-          else onCategoryTap(id);
+          else openExpenseModal(id);
         });
       })(catButtons[i]);
     }
@@ -775,39 +838,47 @@
     renderMoney();
   }
 
-  function onCategoryTap(id){
-    var label = LABELS[id] || id;
-    var useScan = window.confirm(label + '\n\nTap OK to scan a screenshot for the amount, or Cancel to type it.');
-    if(useScan){
-      pendingCategoryForScan = id;
-      scanFileInput.click();
-    } else {
-      finalizeExpense(id, null);
-    }
+  function commitExpense(category, amount){
+    expenses.push({ category: category, amount: Math.round(amount), date: new Date().toISOString() });
+    saveExpenses(expenses);
+    renderMoney();
   }
 
-  function logExpense(category){
-    finalizeExpense(category, null);
+  function resetScanButton(){
+    expenseScanBtn.disabled = false;
+    expenseScanBtn.textContent = '\uD83D\uDCF7 Take a pic or choose from gallery';
   }
 
-  function finalizeExpense(category, prefillAmount){
-    var label = LABELS[category] || category;
-    var hasPrefill = prefillAmount !== null && prefillAmount !== undefined;
-    var promptLabel = hasPrefill
-      ? label + ' \u2014 confirm the amount from your screenshot (\u20A9):'
-      : label + ' \u2014 amount spent (\u20A9):';
-    var defaultVal = hasPrefill ? String(prefillAmount) : '';
-    var input = window.prompt(promptLabel, defaultVal);
-    if(input === null) return;
-    var cleaned = String(input).replace(/[^0-9.]/g, '');
+  function openExpenseModal(category){
+    activeExpenseCategory = category;
+    expenseModalTitle.textContent = LABELS[category] || category;
+    expenseAmountInput.value = '';
+    resetScanButton();
+    expenseModalOverlay.style.display = 'flex';
+    setTimeout(function(){ expenseAmountInput.focus(); }, 30);
+  }
+
+  function closeExpenseModal(){
+    expenseModalOverlay.style.display = 'none';
+    activeExpenseCategory = null;
+  }
+
+  function saveExpenseFromModal(){
+    if(!activeExpenseCategory) return;
+    var cleaned = String(expenseAmountInput.value).replace(/[^0-9.]/g, '');
     var n = parseFloat(cleaned);
     if(!cleaned || isNaN(n) || n <= 0){
       window.alert('Enter a number greater than 0.');
       return;
     }
-    expenses.push({ category: category, amount: Math.round(n), date: new Date().toISOString() });
-    saveExpenses(expenses);
-    renderMoney();
+    commitExpense(activeExpenseCategory, n);
+    closeExpenseModal();
+  }
+
+  // kept for tests / any direct programmatic logging; the on-screen flow
+  // now goes through the modal above instead of a prompt
+  function logExpense(category, amount){
+    commitExpense(category, amount);
   }
 
   function undoLastExpense(){
@@ -819,9 +890,9 @@
   }
 
   // ---- receipt scan: OCR reads the image, finds the largest plausible
-  // number, then drops straight into the same confirm prompt as manual
-  // entry, for the category that was tapped to start the scan. The photo
-  // itself is never saved anywhere, only the confirmed number is. ----
+  // number, and drops it straight into the amount box in the modal that's
+  // already open, so it can be reviewed before saving. The photo itself is
+  // never saved anywhere, only the confirmed number is. ----
   function extractLikelyAmount(text){
     var matches = String(text).match(/[0-9][0-9,]*(\.[0-9]+)?/g);
     if(!matches) return null;
@@ -833,13 +904,12 @@
   }
 
   function runOcr(file){
-    var category = pendingCategoryForScan;
-    pendingCategoryForScan = null;
-    moneyTotalLine.textContent = 'Reading image\u2026';
+    var category = activeExpenseCategory;
+    expenseScanBtn.disabled = true;
+    expenseScanBtn.textContent = 'Reading image\u2026';
     if(typeof Tesseract === 'undefined'){
-      window.alert("The scanner didn't load, check your connection. You can type the amount instead.");
-      renderMoney();
-      finalizeExpense(category, null);
+      resetScanButton();
+      window.alert("The scanner didn't load, check your connection. You can still type the amount.");
       return;
     }
     return Tesseract.createWorker('eng').then(function(worker){
@@ -847,15 +917,19 @@
         return worker.terminate().then(function(){ return result; });
       });
     }).then(function(result){
+      resetScanButton();
+      if(category !== activeExpenseCategory) return; // modal moved on while scanning
       var text = (result && result.data && result.data.text) || '';
       var amount = extractLikelyAmount(text);
-      renderMoney();
-      if(amount === null) window.alert("Couldn't find a clear amount in that image. Type it instead.");
-      finalizeExpense(category, amount);
+      if(amount === null){
+        window.alert("Couldn't find a clear amount in that image. You can still type it.");
+      } else {
+        expenseAmountInput.value = String(amount);
+        expenseAmountInput.focus();
+      }
     }).catch(function(){
-      renderMoney();
-      window.alert('Something went wrong reading that image. Type the amount instead.');
-      finalizeExpense(category, null);
+      resetScanButton();
+      window.alert('Something went wrong reading that image. You can still type the amount.');
     });
   }
 
@@ -888,6 +962,15 @@
     var file = e.target.files && e.target.files[0];
     scanFileInput.value = '';
     if(file) runOcr(file);
+  });
+  expenseScanBtn.addEventListener('click', function(){ scanFileInput.click(); });
+  expenseCancelBtn.addEventListener('click', closeExpenseModal);
+  expenseSaveBtn.addEventListener('click', saveExpenseFromModal);
+  expenseAmountInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') saveExpenseFromModal();
+  });
+  expenseModalOverlay.addEventListener('click', function(e){
+    if(e.target === expenseModalOverlay) closeExpenseModal();
   });
 
   modeTimeBtn.addEventListener('click', function(){ setMode('time'); });

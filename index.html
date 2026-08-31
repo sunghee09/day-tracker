@@ -207,6 +207,36 @@
     pointer-events:none;
   }
   .modal-input.amount-input{ padding-left:32px; }
+  .installment-toggle{
+    display:flex; align-items:center; gap:8px;
+    font-size:14px; color:var(--text-dim);
+    margin-top:12px;
+    cursor:pointer;
+  }
+  .installment-toggle input{ width:16px; height:16px; }
+  .installment-panel{
+    margin-top:10px;
+    padding:12px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .installment-label{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.3px; margin-bottom:8px; }
+  .installment-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .installment-chip{
+    padding:6px 12px;
+    border-radius:999px;
+    font-size:13px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    font-family:inherit;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .installment-chip[data-selected="true"]{ border-color:var(--text); background:var(--text); color:var(--bg); }
+  .installment-preview{ font-size:13px; color:var(--text-dim); }
 </style>
 </head>
 <body>
@@ -270,6 +300,15 @@
       <div class="amount-field">
         <span class="amount-prefix">₩</span>
         <input class="modal-input amount-input" id="expenseAmountInput" type="text" inputmode="numeric" placeholder="0">
+      </div>
+      <label class="installment-toggle">
+        <input type="checkbox" id="installmentToggle">
+        Split into installments
+      </label>
+      <div class="installment-panel" id="installmentPanel" style="display:none;">
+        <div class="installment-label">Months</div>
+        <div class="installment-chips" id="installmentChips"></div>
+        <div class="installment-preview" id="installmentPreview"></div>
       </div>
       <button class="btn btn-dashed" id="expenseScanBtn" style="margin:12px 0 0; width:100%;">📷 Take a pic or choose from gallery</button>
       <div class="modal-actions">
@@ -522,6 +561,20 @@
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
   }
 
+  // adds N months to a date, clamping the day to the last valid day of the
+  // target month instead of overflowing (Jan 31 + 1 month -> Feb 28, never
+  // a March date), matching how a real card billing cycle behaves
+  function addMonthsClamped(date, monthsToAdd){
+    var m = date.getMonth() + monthsToAdd;
+    var targetYear = date.getFullYear() + Math.floor(m / 12);
+    var targetMonth = ((m % 12) + 12) % 12;
+    var daysInTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+    var clampedDay = Math.min(date.getDate(), daysInTargetMonth);
+    var result = new Date(date.getTime());
+    result.setFullYear(targetYear, targetMonth, clampedDay);
+    return result;
+  }
+
   // ---- money: every logged expense grouped into the month it fell in.
   // Order is built from current categories, plus any older category id
   // still found in that month's data (so deleting a button never hides
@@ -626,6 +679,12 @@
   var expenseScanBtn = document.getElementById('expenseScanBtn');
   var expenseCancelBtn = document.getElementById('expenseCancelBtn');
   var expenseSaveBtn = document.getElementById('expenseSaveBtn');
+  var installmentToggle = document.getElementById('installmentToggle');
+  var installmentPanel = document.getElementById('installmentPanel');
+  var installmentChips = document.getElementById('installmentChips');
+  var installmentPreview = document.getElementById('installmentPreview');
+  var INSTALLMENT_MONTHS = [2, 3, 4, 6, 10, 12];
+  var selectedInstallmentMonths = 3;
   var footnote = document.getElementById('footnote');
 
   var BUTTONS = TYPES.map(function(type){
@@ -788,7 +847,9 @@
     var body = data.rows.map(function(e){
       var d = new Date(e.date);
       var dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
-      return '<tr><td>' + dateStr + '</td><td>' + (LABELS[e.category] || e.category) + '</td><td>' + formatWon(e.amount) + '</td></tr>';
+      var label = LABELS[e.category] || e.category;
+      if(e.installment) label += ' (' + e.installment.index + '/' + e.installment.total + ')';
+      return '<tr><td>' + dateStr + '</td><td>' + label + '</td><td>' + formatWon(e.amount) + '</td></tr>';
     }).join('');
     var table = '<table class="history-table money-table"><thead><tr><th>Date</th><th>Category</th><th>Amount</th></tr></thead><tbody>' + body + '</tbody></table>';
 
@@ -877,6 +938,29 @@
     renderMoney();
   }
 
+  // splits a total into N monthly entries dated this month, next month, and
+  // so on (clamped so odd days like the 31st never skip a short month).
+  // Rounding remainder goes to the earliest months, one won at a time, so
+  // the entries always sum to exactly the original total.
+  function commitInstallments(category, totalAmount, months){
+    var groupId = 'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    var base = Math.floor(totalAmount / months);
+    var remainder = totalAmount - base * months;
+    var now = new Date();
+    for(var i = 0; i < months; i++){
+      var amt = base + (i < remainder ? 1 : 0);
+      var d = addMonthsClamped(now, i);
+      expenses.push({
+        category: category,
+        amount: amt,
+        date: d.toISOString(),
+        installment: { groupId: groupId, index: i + 1, total: months }
+      });
+    }
+    saveExpenses(expenses);
+    renderMoney();
+  }
+
   // live comma formatting for the amount box: strip everything but digits,
   // then re-insert a comma every 3 digits from the right
   function formatAmountDigits(raw){
@@ -894,11 +978,37 @@
     expenseScanBtn.textContent = '\uD83D\uDCF7 Take a pic or choose from gallery';
   }
 
+  function renderInstallmentChips(){
+    installmentChips.innerHTML = INSTALLMENT_MONTHS.map(function(m){
+      return '<button type="button" class="installment-chip" data-m="' + m + '" data-selected="' + (m === selectedInstallmentMonths) + '">' + m + '</button>';
+    }).join('');
+    var chipEls = installmentChips.querySelectorAll('[data-m]');
+    for(var i = 0; i < chipEls.length; i++){
+      (function(btn){
+        btn.addEventListener('click', function(){
+          selectedInstallmentMonths = parseInt(btn.getAttribute('data-m'), 10);
+          renderInstallmentChips();
+          updateInstallmentPreview();
+        });
+      })(chipEls[i]);
+    }
+  }
+
+  function updateInstallmentPreview(){
+    var total = parseFloat(rawAmountValue(expenseAmountInput.value)) || 0;
+    var per = Math.round(total / selectedInstallmentMonths);
+    installmentPreview.textContent = '\u2248 ' + formatWon(per) + '/month \u00D7 ' + selectedInstallmentMonths + ' months';
+  }
+
   function openExpenseModal(category){
     activeExpenseCategory = category;
     expenseModalTitle.textContent = LABELS[category] || category;
     expenseAmountInput.value = '';
     resetScanButton();
+    installmentToggle.checked = false;
+    installmentPanel.style.display = 'none';
+    selectedInstallmentMonths = 3;
+    renderInstallmentChips();
     expenseModalOverlay.style.display = 'flex';
     setTimeout(function(){ expenseAmountInput.focus(); }, 30);
   }
@@ -916,7 +1026,11 @@
       window.alert('Enter a number greater than 0.');
       return;
     }
-    commitExpense(activeExpenseCategory, n);
+    if(installmentToggle.checked && selectedInstallmentMonths > 1){
+      commitInstallments(activeExpenseCategory, Math.round(n), selectedInstallmentMonths);
+    } else {
+      commitExpense(activeExpenseCategory, n);
+    }
     closeExpenseModal();
   }
 
@@ -926,12 +1040,19 @@
     commitExpense(category, amount);
   }
 
+  // if the most recent entry was part of an installment group, undo removes
+  // the whole group together, never leaving a broken 2-of-3 behind
   function undoLastExpense(){
-    if(expenses.length){
+    if(!expenses.length) return;
+    var last = expenses[expenses.length - 1];
+    if(last.installment && last.installment.groupId){
+      var gid = last.installment.groupId;
+      expenses = expenses.filter(function(e){ return !(e.installment && e.installment.groupId === gid); });
+    } else {
       expenses.pop();
-      saveExpenses(expenses);
-      renderMoney();
     }
+    saveExpenses(expenses);
+    renderMoney();
   }
 
   // ---- receipt scan: OCR reads the image, finds the largest plausible
@@ -1016,6 +1137,11 @@
   });
   expenseAmountInput.addEventListener('input', function(){
     expenseAmountInput.value = formatAmountDigits(expenseAmountInput.value);
+    if(installmentToggle.checked) updateInstallmentPreview();
+  });
+  installmentToggle.addEventListener('change', function(){
+    installmentPanel.style.display = installmentToggle.checked ? 'block' : 'none';
+    if(installmentToggle.checked) updateInstallmentPreview();
   });
   expenseModalOverlay.addEventListener('click', function(e){
     if(e.target === expenseModalOverlay) closeExpenseModal();

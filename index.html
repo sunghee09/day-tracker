@@ -198,6 +198,16 @@
   }
   .modal-btn-secondary{ background:transparent; color:var(--text-dim); }
   .modal-btn-primary{ background:var(--text); color:var(--bg); border-color:var(--text); }
+  .amount-field{ position:relative; }
+  .amount-prefix{
+    position:absolute;
+    left:14px; top:50%;
+    transform:translateY(-50%);
+    font-size:18px;
+    color:var(--text-dim);
+    pointer-events:none;
+  }
+  .modal-input.amount-input{ padding-left:32px; }
 </style>
 </head>
 <body>
@@ -259,7 +269,10 @@
   <div class="modal-overlay" id="expenseModalOverlay" style="display:none;">
     <div class="modal-box">
       <div class="modal-title" id="expenseModalTitle">Category</div>
-      <input class="modal-input" id="expenseAmountInput" type="number" inputmode="decimal" min="0" placeholder="0">
+      <div class="amount-field">
+        <span class="amount-prefix">₩</span>
+        <input class="modal-input amount-input" id="expenseAmountInput" type="text" inputmode="numeric" placeholder="0">
+      </div>
       <button class="btn btn-dashed" id="expenseScanBtn" style="margin:12px 0 0; width:100%;">📷 Take a pic or choose from gallery</button>
       <div class="modal-actions">
         <button class="modal-btn-secondary" id="expenseCancelBtn">Cancel</button>
@@ -844,6 +857,18 @@
     renderMoney();
   }
 
+  // live comma formatting for the amount box: strip everything but digits,
+  // then re-insert a comma every 3 digits from the right
+  function formatAmountDigits(raw){
+    var digits = String(raw).replace(/[^0-9]/g, '');
+    digits = digits.replace(/^0+(?=\d)/, '');
+    if(!digits) return '';
+    return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  }
+  function rawAmountValue(formatted){
+    return String(formatted).replace(/[^0-9]/g, '');
+  }
+
   function resetScanButton(){
     expenseScanBtn.disabled = false;
     expenseScanBtn.textContent = '\uD83D\uDCF7 Take a pic or choose from gallery';
@@ -865,7 +890,7 @@
 
   function saveExpenseFromModal(){
     if(!activeExpenseCategory) return;
-    var cleaned = String(expenseAmountInput.value).replace(/[^0-9.]/g, '');
+    var cleaned = rawAmountValue(expenseAmountInput.value);
     var n = parseFloat(cleaned);
     if(!cleaned || isNaN(n) || n <= 0){
       window.alert('Enter a number greater than 0.');
@@ -924,7 +949,7 @@
       if(amount === null){
         window.alert("Couldn't find a clear amount in that image. You can still type it.");
       } else {
-        expenseAmountInput.value = String(amount);
+        expenseAmountInput.value = formatAmountDigits(String(amount));
         expenseAmountInput.focus();
       }
     }).catch(function(){
@@ -968,6 +993,9 @@
   expenseSaveBtn.addEventListener('click', saveExpenseFromModal);
   expenseAmountInput.addEventListener('keydown', function(e){
     if(e.key === 'Enter') saveExpenseFromModal();
+  });
+  expenseAmountInput.addEventListener('input', function(){
+    expenseAmountInput.value = formatAmountDigits(expenseAmountInput.value);
   });
   expenseModalOverlay.addEventListener('click', function(e){
     if(e.target === expenseModalOverlay) closeExpenseModal();

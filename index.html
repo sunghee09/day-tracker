@@ -75,7 +75,6 @@
     appearance:none;
   }
   .btn[data-active="true"][data-type="work"]{ background:var(--work); border-color:var(--work); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
-  .btn[data-active="true"][data-type="job"]{ background:var(--job); border-color:var(--job); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
   .btn[data-active="true"][data-type="productive"]{ background:var(--productive); border-color:var(--productive); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
   .btn[data-active="true"][data-type="sleep"]{ background:var(--sleep); border-color:var(--sleep); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
   .money-btn-wide{ grid-column:1 / -1; }
@@ -224,8 +223,7 @@
     <div class="buttons">
       <button class="btn" id="workBtn" data-type="work" data-active="false">▶ App</button>
       <button class="btn" id="productiveBtn" data-type="productive" data-active="false">▶ Productive</button>
-      <button class="btn" id="jobBtn" data-type="job" data-active="false">▶ Work</button>
-      <button class="btn" id="sleepBtn" data-type="sleep" data-active="false">▶ Sleep</button>
+      <button class="btn money-btn-wide" id="sleepBtn" data-type="sleep" data-active="false">▶ Sleep</button>
     </div>
 
     <div class="status-row">
@@ -289,8 +287,9 @@
 (function(){
   // NOTE ON TIME CATEGORY KEYS: the internal key "work" displays as "App" —
   // it's the original tracked category, kept as-is on purpose so every
-  // session already logged under it stays intact. "job" and "productive"
-  // are newer categories and start at zero.
+  // session already logged under it stays intact. "productive" was added
+  // later. "job" (the separate "Work" button) has since been retired; any
+  // old data logged under it now folds into Other rather than being lost.
   var COLORS = {
     work: '#E8794A', job: '#3FBFA8', productive: '#E8C24A', sleep: '#6C6FF0', other: '#3A3F4B',
     fashion: '#5DBB6F', junk: '#E2574C', essentials: '#4EA8E8',
@@ -301,7 +300,7 @@
     fashion: 'Fashion', junk: 'Junk Food', essentials: 'Essentials',
     makeup: 'Beauty', aesthetics: 'Aesthetics', food: 'Food'
   };
-  var TYPES = ['work', 'job', 'productive', 'sleep'];
+  var TYPES = ['work', 'productive', 'sleep'];
 
   // ---- money categories are user-editable, stored as {id,label,color} ----
   // ids never change once created (rename only touches the label), so
@@ -382,6 +381,19 @@
 
   var sessions = loadSessions();
   var active = loadActive();
+
+  // The Work (internal key "job") category was removed. If it happened to
+  // be actively running when this update loads, close it out as a normal
+  // completed session right now, rather than leaving a "running" state
+  // with no button left to stop it. The time itself isn't lost, it folds
+  // into Other from this point on, same as any other retired category.
+  if(active && active.type === 'job'){
+    sessions.push({ type: 'job', start: active.start, end: new Date().toISOString() });
+    saveSessions(sessions);
+    active = null;
+    saveActive(null);
+  }
+
   var expenses = loadExpenses();
   var moneyCategories = loadMoneyCategories();
   var editingMoney = false;
@@ -427,7 +439,7 @@
   function computeTodayTotals(){
     var boundStart = startOfToday();
     var boundEnd = endOfToday();
-    var totals = { work:0, job:0, productive:0, sleep:0 };
+    var totals = { work:0, productive:0, sleep:0 };
     sessions.forEach(function(s){
       var ms = overlapMs(s.start, s.end, boundStart, boundEnd);
       if(totals[s.type] !== undefined) totals[s.type] += ms;
@@ -437,7 +449,7 @@
       if(totals[active.type] !== undefined) totals[active.type] += ms2;
     }
     var DAY_MS = boundEnd - boundStart;
-    var used = totals.work + totals.job + totals.productive + totals.sleep;
+    var used = totals.work + totals.productive + totals.sleep;
     totals.other = Math.max(0, DAY_MS - used);
     return totals;
   }
@@ -471,7 +483,7 @@
         var bounds = dayBoundsForKey(key);
         var chunkEnd = Math.min(e, bounds[1]);
         var dur = chunkEnd - cursor;
-        if(!byDay[key]) byDay[key] = { work:0, job:0, productive:0, sleep:0 };
+        if(!byDay[key]) byDay[key] = { work:0, productive:0, sleep:0 };
         if(byDay[key][type] !== undefined) byDay[key][type] += dur;
         cursor = chunkEnd;
       }
@@ -485,9 +497,9 @@
       .sort().reverse()
       .map(function(k){
         var d = byDay[k];
-        var used = d.work + d.job + d.productive + d.sleep;
+        var used = d.work + d.productive + d.sleep;
         var o = Math.max(0, 24*3600*1000 - used);
-        return { key:k, work:d.work, job:d.job, productive:d.productive, sleep:d.sleep, other:o };
+        return { key:k, work:d.work, productive:d.productive, sleep:d.sleep, other:o };
       });
   }
 
@@ -631,15 +643,6 @@
 
     var monthRows = rows.filter(function(r){ return monthKeyOf(r.key) === viewMonth; });
 
-    var mVals = { work:0, job:0, productive:0, sleep:0 };
-    monthRows.forEach(function(r){
-      mVals.work += r.work; mVals.job += r.job; mVals.productive += r.productive; mVals.sleep += r.sleep;
-    });
-    var used = mVals.work + mVals.job + mVals.productive + mVals.sleep;
-    mVals.other = Math.max(0, monthRows.length * 24*3600*1000 - used);
-
-    var order = ['work','job','productive','sleep','other'];
-
     var nav = '<div class="month-nav">' +
       '<button class="month-arrow" id="prevMonth">\u2039</button>' +
       '<div class="month-label">' + formatMonthKey(viewMonth) + '</div>' +
@@ -652,20 +655,37 @@
       return;
     }
 
-    var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + buildDonut(mVals, order) + '</svg></div>';
-    var legendHtml = '<div class="legend">' + buildLegend(mVals, order) + '</div>';
-    var dayCount = '<div class="month-sub">' + monthRows.length + (monthRows.length === 1 ? ' day' : ' days') + ' logged</div>';
+    var mVals = { work:0, productive:0, sleep:0 };
+    monthRows.forEach(function(r){
+      mVals.work += r.work; mVals.productive += r.productive; mVals.sleep += r.sleep;
+    });
+    var used = mVals.work + mVals.productive + mVals.sleep;
+    mVals.other = Math.max(0, monthRows.length * 24*3600*1000 - used);
+
+    // the pie and legend show a per-day AVERAGE across the days actually
+    // logged this month, not the raw total, so it reads as "a typical day"
+    var dayCount = monthRows.length;
+    var avgVals = {
+      work: mVals.work / dayCount,
+      productive: mVals.productive / dayCount,
+      sleep: mVals.sleep / dayCount,
+      other: mVals.other / dayCount
+    };
+    var order = ['work','productive','sleep','other'];
+
+    var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + buildDonut(avgVals, order) + '</svg></div>';
+    var legendHtml = '<div class="legend">' + buildLegend(avgVals, order) + '</div>';
+    var dayCountLabel = '<div class="month-sub">Daily average across ' + dayCount + (dayCount === 1 ? ' day' : ' days') + ' logged</div>';
 
     var body = monthRows.map(function(r){
       return '<tr><td>' + formatDateKey(r.key) + '</td>' +
         '<td>' + formatHM(r.work) + '</td>' +
-        '<td>' + formatHM(r.job) + '</td>' +
         '<td>' + formatHM(r.productive) + '</td>' +
         '<td>' + formatHM(r.sleep) + '</td></tr>';
     }).join('');
-    var table = '<table class="history-table"><thead><tr><th>Date</th><th>App</th><th>Work</th><th>Prod</th><th>Sleep</th></tr></thead><tbody>' + body + '</tbody></table>';
+    var table = '<table class="history-table"><thead><tr><th>Date</th><th>App</th><th>Prod</th><th>Sleep</th></tr></thead><tbody>' + body + '</tbody></table>';
 
-    historyBody.innerHTML = nav + chart + legendHtml + dayCount + table;
+    historyBody.innerHTML = nav + chart + legendHtml + dayCountLabel + table;
     wireMonthNav();
   }
 
@@ -705,7 +725,7 @@
     }
 
     var totals = computeTodayTotals();
-    var order = ['work','job','productive','sleep','other'];
+    var order = ['work','productive','sleep','other'];
     pieSvg.innerHTML = buildDonut(totals, order);
     legend.innerHTML = buildLegend(totals, order);
   }

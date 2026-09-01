@@ -43,6 +43,61 @@
   .app{ width:100%; max-width:440px; }
   .eyebrow{ font-size:13px; color:var(--text-dim); letter-spacing:0.3px; }
   .title{ font-size:22px; font-weight:700; margin-top:2px; margin-bottom:16px; }
+  .header-row{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:22px; }
+  .header-row .title{ margin-bottom:0; }
+  .menu-wrap{ position:relative; flex:none; }
+  .menu-trigger{
+    width:36px; height:36px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--card);
+    color:var(--text-dim);
+    font-size:20px;
+    line-height:1;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .menu-dropdown{
+    position:absolute;
+    top:44px; right:0;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:6px;
+    min-width:180px;
+    z-index:500;
+    box-shadow:0 8px 24px rgba(0,0,0,0.45);
+  }
+  .menu-item{
+    display:block;
+    width:100%;
+    text-align:left;
+    padding:11px 12px;
+    border-radius:8px;
+    border:none;
+    background:transparent;
+    color:var(--text);
+    font-family:inherit;
+    font-size:14px;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .budget-line{
+    display:block;
+    width:100%;
+    text-align:left;
+    font-size:13px;
+    font-family:inherit;
+    background:none;
+    border:none;
+    padding:0;
+    margin:2px 0 20px;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
   .mode-tabs{ display:flex; gap:8px; margin-bottom:18px; }
   .mode-tab{
     flex:1;
@@ -74,9 +129,7 @@
     -webkit-appearance:none;
     appearance:none;
   }
-  .btn[data-active="true"][data-type="work"]{ background:var(--work); border-color:var(--work); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
-  .btn[data-active="true"][data-type="productive"]{ background:var(--productive); border-color:var(--productive); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
-  .btn[data-active="true"][data-type="sleep"]{ background:var(--sleep); border-color:var(--sleep); color:#0F1013; animation:pulse 2s ease-in-out infinite; }
+  .btn-pulse{ animation:pulse 2s ease-in-out infinite; }
   .money-btn-wide{ grid-column:1 / -1; }
   .btn-dashed{ border-style:dashed; color:var(--text-dim); background:transparent; margin-bottom:10px; }
   @keyframes pulse{ 0%,100%{ opacity:1; } 50%{ opacity:0.82; } }
@@ -241,8 +294,16 @@
 </head>
 <body>
 <div class="app">
-  <div class="eyebrow" id="dateLabel"></div>
-  <div class="title">Time Is Money</div>
+  <div class="header-row">
+    <div>
+      <div class="eyebrow" id="dateLabel"></div>
+      <div class="title">Time Is Money</div>
+    </div>
+    <div class="menu-wrap">
+      <button class="menu-trigger" id="menuTriggerBtn">&#8943;</button>
+      <div class="menu-dropdown" id="menuDropdown" style="display:none;"></div>
+    </div>
+  </div>
 
   <div class="mode-tabs">
     <button class="mode-tab" id="modeTimeBtn" data-active="true">Time</button>
@@ -250,11 +311,7 @@
   </div>
 
   <div id="timeSection">
-    <div class="buttons">
-      <button class="btn" id="workBtn" data-type="work" data-active="false">▶ App</button>
-      <button class="btn" id="productiveBtn" data-type="productive" data-active="false">▶ Productive</button>
-      <button class="btn money-btn-wide" id="sleepBtn" data-type="sleep" data-active="false">▶ Sleep</button>
-    </div>
+    <div class="buttons" id="timeButtons"></div>
 
     <div class="status-row">
       <div class="status" id="statusLine">Nothing running</div>
@@ -285,14 +342,13 @@
 
     <div class="status-row">
       <div class="status" id="moneyTotalLine">₩0 this month</div>
-      <div style="display:flex; gap:14px;">
-        <button class="undo" id="editCategoriesBtn">edit categories</button>
-        <button class="undo" id="undoExpenseBtn" style="display:none;">undo last</button>
-      </div>
+      <button class="undo" id="undoExpenseBtn" style="display:none;">undo last</button>
     </div>
+    <button class="budget-line" id="moneyBudgetLine" type="button">+ Set a monthly budget</button>
 
     <div class="card" id="moneyCard"></div>
   </div>
+
 
   <div class="modal-overlay" id="expenseModalOverlay" style="display:none;">
     <div class="modal-box">
@@ -318,6 +374,34 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="manualTimeModalOverlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-title">Add a past entry</div>
+
+      <div class="installment-label" style="margin-top:0;">Category</div>
+      <div class="installment-chips" id="manualCategoryChips"></div>
+
+      <div class="installment-label">Date</div>
+      <input class="modal-input" id="manualDateInput" type="date" style="margin-bottom:12px;">
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <div class="installment-label">From</div>
+          <input class="modal-input" id="manualStartInput" type="time">
+        </div>
+        <div style="flex:1;">
+          <div class="installment-label">To</div>
+          <input class="modal-input" id="manualEndInput" type="time">
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn-secondary" id="manualCancelBtn">Cancel</button>
+        <button class="modal-btn-primary" id="manualSaveBtn">Add</button>
+      </div>
+    </div>
+  </div>
+
   <div class="footnote" id="footnote"></div>
 </div>
 
@@ -339,8 +423,6 @@
     fashion: 'Fashion', junk: 'Junk Food', essentials: 'Essentials',
     makeup: 'Beauty', aesthetics: 'Aesthetics', food: 'Food'
   };
-  var TYPES = ['work', 'productive', 'sleep'];
-
   // ---- money categories are user-editable, stored as {id,label,color} ----
   // ids never change once created (rename only touches the label), so
   // renaming or deleting a category button can never orphan or lose
@@ -383,6 +465,44 @@
   }
   function syncMoneyCategoryLookups(){
     moneyCategories.forEach(function(c){ COLORS[c.id] = c.color; LABELS[c.id] = c.label; });
+  }
+
+  // ---- time categories are now editable the same way, with one
+  // difference from money: deleting a time category doesn't preserve it
+  // as its own historical line, it folds into Other, since "Other" for
+  // time is a structural concept (whatever isn't explicitly tracked out
+  // of a 24 hour day), not an optional bucket like it is for money. ----
+  var DEFAULT_TIME_CATEGORIES = [
+    { id:'work', label:'App', color:'#E8794A' },
+    { id:'productive', label:'Productive', color:'#E8C24A' },
+    { id:'sleep', label:'Sleep', color:'#6C6FF0' }
+  ];
+  function loadTimeCategories(){
+    try{
+      var raw = localStorage.getItem('dtk_time_categories');
+      if(raw){
+        var arr = JSON.parse(raw);
+        if(Array.isArray(arr) && arr.length) return arr;
+      }
+    }catch(e){}
+    return DEFAULT_TIME_CATEGORIES.slice();
+  }
+  function saveTimeCategories(arr){
+    try{ localStorage.setItem('dtk_time_categories', JSON.stringify(arr)); }catch(e){}
+  }
+  function syncTimeCategoryLookups(){
+    timeCategories.forEach(function(c){ COLORS[c.id] = c.color; LABELS[c.id] = c.label; });
+  }
+
+  function loadMoneyBudget(){
+    try{
+      var raw = localStorage.getItem('dtk_money_budget');
+      var n = raw ? parseFloat(raw) : 0;
+      return isNaN(n) ? 0 : n;
+    }catch(e){ return 0; }
+  }
+  function saveMoneyBudget(n){
+    try{ localStorage.setItem('dtk_money_budget', String(n)); }catch(e){}
   }
 
   function loadActive(){
@@ -435,9 +555,13 @@
 
   var expenses = loadExpenses();
   var moneyCategories = loadMoneyCategories();
+  var timeCategories = loadTimeCategories();
+  var moneyBudget = loadMoneyBudget();
   var editingMoney = false;
+  var editingTime = false;
   var activeExpenseCategory = null;
   syncMoneyCategoryLookups();
+  syncTimeCategoryLookups();
   var mode = 'time';
   var currentView = 'today';
   var viewMonth = null;
@@ -478,7 +602,8 @@
   function computeTodayTotals(){
     var boundStart = startOfToday();
     var boundEnd = endOfToday();
-    var totals = { work:0, productive:0, sleep:0 };
+    var totals = {};
+    timeCategories.forEach(function(c){ totals[c.id] = 0; });
     sessions.forEach(function(s){
       var ms = overlapMs(s.start, s.end, boundStart, boundEnd);
       if(totals[s.type] !== undefined) totals[s.type] += ms;
@@ -488,7 +613,8 @@
       if(totals[active.type] !== undefined) totals[active.type] += ms2;
     }
     var DAY_MS = boundEnd - boundStart;
-    var used = totals.work + totals.productive + totals.sleep;
+    var used = 0;
+    timeCategories.forEach(function(c){ used += totals[c.id]; });
     totals.other = Math.max(0, DAY_MS - used);
     return totals;
   }
@@ -522,7 +648,10 @@
         var bounds = dayBoundsForKey(key);
         var chunkEnd = Math.min(e, bounds[1]);
         var dur = chunkEnd - cursor;
-        if(!byDay[key]) byDay[key] = { work:0, productive:0, sleep:0 };
+        if(!byDay[key]){
+          byDay[key] = {};
+          timeCategories.forEach(function(c){ byDay[key][c.id] = 0; });
+        }
         if(byDay[key][type] !== undefined) byDay[key][type] += dur;
         cursor = chunkEnd;
       }
@@ -536,9 +665,12 @@
       .sort().reverse()
       .map(function(k){
         var d = byDay[k];
-        var used = d.work + d.productive + d.sleep;
+        var used = 0;
+        timeCategories.forEach(function(c){ used += d[c.id]; });
         var o = Math.max(0, 24*3600*1000 - used);
-        return { key:k, work:d.work, productive:d.productive, sleep:d.sleep, other:o };
+        var row = { key:k, other:o };
+        timeCategories.forEach(function(c){ row[c.id] = d[c.id]; });
+        return row;
       });
   }
 
@@ -671,7 +803,6 @@
   var undoExpenseBtn = document.getElementById('undoExpenseBtn');
   var moneyCard = document.getElementById('moneyCard');
   var moneyButtonsEl = document.getElementById('moneyButtons');
-  var editCategoriesBtn = document.getElementById('editCategoriesBtn');
   var scanFileInput = document.getElementById('scanFileInput');
   var expenseModalOverlay = document.getElementById('expenseModalOverlay');
   var expenseModalTitle = document.getElementById('expenseModalTitle');
@@ -685,11 +816,19 @@
   var installmentPreview = document.getElementById('installmentPreview');
   var INSTALLMENT_MONTHS = [2, 3, 4, 5, 8, 12];
   var selectedInstallmentMonths = 3;
+  var manualTimeModalOverlay = document.getElementById('manualTimeModalOverlay');
+  var manualCategoryChips = document.getElementById('manualCategoryChips');
+  var manualDateInput = document.getElementById('manualDateInput');
+  var manualStartInput = document.getElementById('manualStartInput');
+  var manualEndInput = document.getElementById('manualEndInput');
+  var manualCancelBtn = document.getElementById('manualCancelBtn');
+  var manualSaveBtn = document.getElementById('manualSaveBtn');
+  var manualSelectedCategory = 'work';
   var footnote = document.getElementById('footnote');
-
-  var BUTTONS = TYPES.map(function(type){
-    return { type: type, el: document.getElementById(type === 'work' ? 'workBtn' : type + 'Btn') };
-  });
+  var timeButtonsEl = document.getElementById('timeButtons');
+  var menuTriggerBtn = document.getElementById('menuTriggerBtn');
+  var menuDropdown = document.getElementById('menuDropdown');
+  var moneyBudgetLine = document.getElementById('moneyBudgetLine');
 
   dateLabel.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
 
@@ -714,35 +853,34 @@
       return;
     }
 
-    var mVals = { work:0, productive:0, sleep:0 };
+    var mVals = {};
+    timeCategories.forEach(function(c){ mVals[c.id] = 0; });
     monthRows.forEach(function(r){
-      mVals.work += r.work; mVals.productive += r.productive; mVals.sleep += r.sleep;
+      timeCategories.forEach(function(c){ mVals[c.id] += r[c.id] || 0; });
     });
-    var used = mVals.work + mVals.productive + mVals.sleep;
+    var used = 0;
+    timeCategories.forEach(function(c){ used += mVals[c.id]; });
     mVals.other = Math.max(0, monthRows.length * 24*3600*1000 - used);
 
     // the pie and legend show a per-day AVERAGE across the days actually
     // logged this month, not the raw total, so it reads as "a typical day"
     var dayCount = monthRows.length;
-    var avgVals = {
-      work: mVals.work / dayCount,
-      productive: mVals.productive / dayCount,
-      sleep: mVals.sleep / dayCount,
-      other: mVals.other / dayCount
-    };
-    var order = ['work','productive','sleep','other'];
+    var avgVals = { other: mVals.other / dayCount };
+    timeCategories.forEach(function(c){ avgVals[c.id] = mVals[c.id] / dayCount; });
+    var order = timeCategories.map(function(c){ return c.id; }).concat(['other']);
 
     var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + buildDonut(avgVals, order) + '</svg></div>';
     var legendHtml = '<div class="legend">' + buildLegend(avgVals, order) + '</div>';
     var dayCountLabel = '<div class="month-sub">Daily average across ' + dayCount + (dayCount === 1 ? ' day' : ' days') + ' logged</div>';
 
-    var body = monthRows.map(function(r){
-      return '<tr><td>' + formatDateKey(r.key) + '</td>' +
-        '<td>' + formatHM(r.work) + '</td>' +
-        '<td>' + formatHM(r.productive) + '</td>' +
-        '<td>' + formatHM(r.sleep) + '</td></tr>';
+    var tableHeaders = '<th>Date</th>' + timeCategories.map(function(c){
+      return '<th>' + (c.label.length > 5 ? c.label.slice(0,4) : c.label) + '</th>';
     }).join('');
-    var table = '<table class="history-table"><thead><tr><th>Date</th><th>App</th><th>Prod</th><th>Sleep</th></tr></thead><tbody>' + body + '</tbody></table>';
+    var body = monthRows.map(function(r){
+      var cells = timeCategories.map(function(c){ return '<td>' + formatHM(r[c.id] || 0) + '</td>'; }).join('');
+      return '<tr><td>' + formatDateKey(r.key) + '</td>' + cells + '</tr>';
+    }).join('');
+    var table = '<table class="history-table"><thead><tr>' + tableHeaders + '</tr></thead><tbody>' + body + '</tbody></table>';
 
     historyBody.innerHTML = nav + chart + legendHtml + dayCountLabel + table;
     wireMonthNav();
@@ -755,17 +893,86 @@
     if(next) next.addEventListener('click', function(){ viewMonth = shiftMonth(viewMonth, 1); historyDirty = false; renderHistory(); });
   }
 
-  function render(){
-    BUTTONS.forEach(function(b){
-      var isActive = !!(active && active.type === b.type);
-      b.el.setAttribute('data-active', String(isActive));
-      b.el.textContent = isActive ? '■ Stop' : ('\u25B6 ' + LABELS[b.type]);
-    });
+  function renderTimeButtons(){
+    var cats = timeCategories;
+    var html = cats.map(function(c, idx){
+      var isLastOdd = (idx === cats.length - 1) && (cats.length % 2 === 1) && !editingTime;
+      var cls = 'btn' + (isLastOdd ? ' money-btn-wide' : '');
+      if(editingTime){
+        return '<button type="button" class="' + cls + '" data-time-id="' + c.id + '">\u270E ' + c.label + '</button>';
+      }
+      var isActive = !!(active && active.type === c.id);
+      var style = isActive ? ' style="background:' + c.color + '; border-color:' + c.color + '; color:#0F1013;"' : '';
+      return '<button type="button" class="' + cls + (isActive ? ' btn-pulse' : '') + '"' + style + ' data-time-id="' + c.id + '">' + (isActive ? '\u25A0 Stop' : '\u25B6 ' + c.label) + '</button>';
+    }).join('');
+    if(editingTime){
+      html += '<button type="button" class="btn money-btn-wide btn-dashed" id="addTimeCategoryBtn" style="margin-bottom:0;">+ Add category</button>';
+    }
+    timeButtonsEl.innerHTML = html;
 
+    var btns = timeButtonsEl.querySelectorAll('[data-time-id]');
+    for(var i = 0; i < btns.length; i++){
+      (function(btn){
+        btn.addEventListener('click', function(){
+          var id = btn.getAttribute('data-time-id');
+          if(editingTime) editTimeCategory(id);
+          else toggle(id);
+        });
+      })(btns[i]);
+    }
+    if(editingTime){
+      var addBtn = document.getElementById('addTimeCategoryBtn');
+      if(addBtn) addBtn.addEventListener('click', addTimeCategory);
+    }
+  }
+
+  function editTimeCategory(id){
+    var cat = timeCategories.filter(function(c){ return c.id === id; })[0];
+    if(!cat) return;
+    var input = window.prompt('Rename "' + cat.label + '", or clear the text and confirm to remove this button:', cat.label);
+    if(input === null) return;
+    var trimmed = input.trim();
+    if(trimmed === ''){
+      var sure = window.confirm('Remove the "' + cat.label + '" button? Time already logged under it folds into Other going forward, it is not deleted.');
+      if(!sure) return;
+      if(active && active.type === id){
+        sessions.push({ type: id, start: active.start, end: new Date().toISOString() });
+        saveSessions(sessions);
+        active = null;
+        saveActive(null);
+      }
+      timeCategories = timeCategories.filter(function(c){ return c.id !== id; });
+    } else {
+      cat.label = trimmed;
+      LABELS[id] = trimmed;
+    }
+    saveTimeCategories(timeCategories);
+    historyDirty = true;
+    renderTimeButtons();
+    render();
+  }
+
+  function addTimeCategory(){
+    var input = window.prompt('New category name:');
+    if(input === null) return;
+    var trimmed = input.trim();
+    if(!trimmed){ window.alert('Enter a name first.'); return; }
+    var existingIds = timeCategories.map(function(c){ return c.id; });
+    var id = slugify(trimmed, existingIds);
+    var color = nextColor(timeCategories);
+    timeCategories.push({ id: id, label: trimmed, color: color });
+    COLORS[id] = color;
+    LABELS[id] = trimmed;
+    saveTimeCategories(timeCategories);
+    renderTimeButtons();
+    render();
+  }
+
+  function render(){
     if(active){
       var elapsed = Date.now() - new Date(active.start).getTime();
-      statusLine.style.color = COLORS[active.type];
-      statusLine.textContent = LABELS[active.type] + ' running \u00B7 ' + formatClock(elapsed);
+      statusLine.style.color = COLORS[active.type] || 'var(--text)';
+      statusLine.textContent = (LABELS[active.type] || active.type) + ' running \u00B7 ' + formatClock(elapsed);
     } else {
       statusLine.style.color = 'var(--text-faint)';
       statusLine.textContent = 'Nothing running';
@@ -784,7 +991,7 @@
     }
 
     var totals = computeTodayTotals();
-    var order = ['work','productive','sleep','other'];
+    var order = timeCategories.map(function(c){ return c.id; }).concat(['other']);
     pieSvg.innerHTML = buildDonut(totals, order);
     legend.innerHTML = buildLegend(totals, order);
   }
@@ -806,6 +1013,7 @@
       active = { type: type, start: nowIso };
       saveActive(active);
     }
+    renderTimeButtons();
     render();
   }
 
@@ -818,6 +1026,65 @@
       sessions.pop();
       saveSessions(sessions);
     }
+    renderTimeButtons();
+    render();
+  }
+
+  // ---- add a past entry: for when the button was forgotten in the moment
+  // (fell asleep before hitting Sleep, etc). Builds a normal completed
+  // session directly, same shape as one made by the live toggle. If the
+  // end time is earlier than the start time, it's treated as crossing
+  // midnight into the next day rather than an error. ----
+  function renderManualCategoryChips(){
+    manualCategoryChips.innerHTML = timeCategories.map(function(c){
+      return '<button type="button" class="installment-chip" data-type="' + c.id + '" data-selected="' + (c.id === manualSelectedCategory) + '">' + c.label + '</button>';
+    }).join('');
+    var chipEls = manualCategoryChips.querySelectorAll('[data-type]');
+    for(var i = 0; i < chipEls.length; i++){
+      (function(btn){
+        btn.addEventListener('click', function(){
+          manualSelectedCategory = btn.getAttribute('data-type');
+          renderManualCategoryChips();
+        });
+      })(chipEls[i]);
+    }
+  }
+
+  function openManualTimeModal(){
+    manualSelectedCategory = timeCategories.length ? timeCategories[0].id : 'work';
+    renderManualCategoryChips();
+    var today = new Date();
+    manualDateInput.value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
+    manualStartInput.value = '';
+    manualEndInput.value = '';
+    manualTimeModalOverlay.style.display = 'flex';
+  }
+
+  function closeManualTimeModal(){
+    manualTimeModalOverlay.style.display = 'none';
+  }
+
+  function saveManualTimeEntry(){
+    var dateStr = manualDateInput.value;
+    var startStr = manualStartInput.value;
+    var endStr = manualEndInput.value;
+    if(!dateStr || !startStr || !endStr){
+      window.alert('Fill in the date and both times.');
+      return;
+    }
+    var start = new Date(dateStr + 'T' + startStr + ':00');
+    var end = new Date(dateStr + 'T' + endStr + ':00');
+    if(isNaN(start.getTime()) || isNaN(end.getTime())){
+      window.alert('Something looks off with those times, try again.');
+      return;
+    }
+    if(end.getTime() <= start.getTime()){
+      end = new Date(end.getTime() + 24*3600*1000); // crossed midnight
+    }
+    sessions.push({ type: manualSelectedCategory, start: start.toISOString(), end: end.toISOString() });
+    saveSessions(sessions);
+    historyDirty = true;
+    closeManualTimeModal();
     render();
   }
 
@@ -828,6 +1095,20 @@
 
     moneyTotalLine.textContent = formatWon(total) + ' this month';
     undoExpenseBtn.style.display = expenses.length ? 'block' : 'none';
+
+    if(moneyBudget > 0){
+      var remaining = moneyBudget - total;
+      if(remaining >= 0){
+        moneyBudgetLine.textContent = formatWon(remaining) + ' left of your ' + formatWon(moneyBudget) + ' budget';
+        moneyBudgetLine.style.color = 'var(--text-dim)';
+      } else {
+        moneyBudgetLine.textContent = formatWon(-remaining) + ' over your ' + formatWon(moneyBudget) + ' budget';
+        moneyBudgetLine.style.color = '#E2574C';
+      }
+    } else {
+      moneyBudgetLine.textContent = '+ Set a monthly budget';
+      moneyBudgetLine.style.color = 'var(--text-dim)';
+    }
 
     var nav = '<div class="month-nav">' +
       '<button class="month-arrow" id="prevMoneyMonth">\u2039</button>' +
@@ -1099,6 +1380,53 @@
     });
   }
 
+  function openMoneyBudgetPrompt(){
+    var current = moneyBudget > 0 ? String(moneyBudget) : '';
+    var input = window.prompt('Monthly spending budget (\u20A9), or clear the field to remove it:', current);
+    if(input === null) return;
+    var cleaned = String(input).replace(/[^0-9]/g, '');
+    moneyBudget = cleaned ? parseInt(cleaned, 10) : 0;
+    saveMoneyBudget(moneyBudget);
+    renderMoney();
+  }
+
+  // ---- three-dot menu: contents change based on which mode is showing ----
+  function renderMenuDropdown(){
+    var items = [];
+    if(mode === 'time'){
+      items.push({ label: 'Add past entry', action: openManualTimeModal });
+      items.push({
+        label: editingTime ? 'Done editing categories' : 'Edit categories',
+        action: function(){ editingTime = !editingTime; renderTimeButtons(); }
+      });
+    } else {
+      items.push({
+        label: editingMoney ? 'Done editing categories' : 'Edit categories',
+        action: function(){ editingMoney = !editingMoney; renderMoneyButtons(); }
+      });
+    }
+    menuDropdown.innerHTML = items.map(function(it, idx){
+      return '<button type="button" class="menu-item" data-idx="' + idx + '">' + it.label + '</button>';
+    }).join('');
+    var btns = menuDropdown.querySelectorAll('.menu-item');
+    for(var i = 0; i < btns.length; i++){
+      (function(btn, item){
+        btn.addEventListener('click', function(){
+          item.action();
+          closeMenu();
+        });
+      })(btns[i], items[i]);
+    }
+  }
+
+  function openMenu(){
+    renderMenuDropdown();
+    menuDropdown.style.display = 'block';
+  }
+  function closeMenu(){
+    menuDropdown.style.display = 'none';
+  }
+
   function setMode(m){
     mode = m;
     modeTimeBtn.setAttribute('data-active', String(mode === 'time'));
@@ -1108,22 +1436,22 @@
     footnote.textContent = mode === 'time'
       ? "Resets at midnight. \"Other\" is whatever's left of the 24 hours."
       : 'Just logs what you tap in. Nothing here is automatic.';
-    if(mode === 'time') render();
+    closeMenu();
+    if(mode === 'time'){ renderTimeButtons(); render(); }
     else { renderMoneyButtons(); renderMoney(); }
   }
 
-  BUTTONS.forEach(function(b){ b.el.addEventListener('click', function(){ toggle(b.type); }); });
   undoBtn.addEventListener('click', undoLast);
+  manualCancelBtn.addEventListener('click', closeManualTimeModal);
+  manualSaveBtn.addEventListener('click', saveManualTimeEntry);
+  manualTimeModalOverlay.addEventListener('click', function(e){
+    if(e.target === manualTimeModalOverlay) closeManualTimeModal();
+  });
   tabToday.addEventListener('click', function(){ currentView = 'today'; render(); });
   tabHistory.addEventListener('click', function(){ currentView = 'history'; historyDirty = true; render(); });
 
-  renderMoneyButtons();
   undoExpenseBtn.addEventListener('click', undoLastExpense);
-  editCategoriesBtn.addEventListener('click', function(){
-    editingMoney = !editingMoney;
-    editCategoriesBtn.textContent = editingMoney ? 'done' : 'edit categories';
-    renderMoneyButtons();
-  });
+  moneyBudgetLine.addEventListener('click', openMoneyBudgetPrompt);
   scanFileInput.addEventListener('change', function(e){
     var file = e.target.files && e.target.files[0];
     scanFileInput.value = '';
@@ -1147,11 +1475,24 @@
     if(e.target === expenseModalOverlay) closeExpenseModal();
   });
 
+  menuTriggerBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    if(menuDropdown.style.display === 'block') closeMenu(); else openMenu();
+  });
+  document.addEventListener('click', function(e){
+    if(menuDropdown.style.display === 'block' && e.target !== menuTriggerBtn && !menuDropdown.contains(e.target)){
+      closeMenu();
+    }
+  });
+
   modeTimeBtn.addEventListener('click', function(){ setMode('time'); });
   modeMoneyBtn.addEventListener('click', function(){ setMode('money'); });
 
   viewMonth = currentMonthKey();
   viewMonthMoney = currentMonthKey();
+
+  renderTimeButtons();
+  renderMoneyButtons();
 
   setInterval(function(){ if(mode === 'time') render(); }, 1000);
   setMode('time');

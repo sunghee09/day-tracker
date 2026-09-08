@@ -85,15 +85,13 @@
     appearance:none;
   }
   .budget-line{
-    display:block;
-    width:100%;
     text-align:left;
-    font-size:13px;
+    font-size:14px;
     font-family:inherit;
     background:none;
     border:none;
     padding:0;
-    margin:2px 0 20px;
+    margin:0;
     cursor:pointer;
     -webkit-appearance:none;
     appearance:none;
@@ -341,10 +339,9 @@
     <div class="buttons" id="moneyButtons"></div>
 
     <div class="status-row">
-      <div class="status" id="moneyTotalLine">₩0 this month</div>
+      <button class="budget-line" id="moneyBudgetLine" type="button">+ Set a monthly budget</button>
       <button class="undo" id="undoExpenseBtn" style="display:none;">undo last</button>
     </div>
-    <button class="budget-line" id="moneyBudgetLine" type="button">+ Set a monthly budget</button>
 
     <div class="card" id="moneyCard"></div>
   </div>
@@ -497,9 +494,10 @@
   function loadMoneyBudget(){
     try{
       var raw = localStorage.getItem('dtk_money_budget');
-      var n = raw ? parseFloat(raw) : 0;
-      return isNaN(n) ? 0 : n;
-    }catch(e){ return 0; }
+      if(raw === null) return 800000; // nothing saved yet, default until she sets her own
+      var n = parseFloat(raw);
+      return isNaN(n) ? 800000 : n;
+    }catch(e){ return 800000; }
   }
   function saveMoneyBudget(n){
     try{ localStorage.setItem('dtk_money_budget', String(n)); }catch(e){}
@@ -785,6 +783,15 @@
     }).join('');
   }
 
+  // renders one or two lines of text centered in the hollow middle of a
+  // donut chart (viewBox is always 0 0 200 200, so center is 100,100)
+  function buildDonutCenterText(lines){
+    return lines.map(function(l){
+      return '<text x="100" y="' + (100 + l.dy) + '" text-anchor="middle" font-family="inherit"' +
+        ' font-size="' + l.size + '" font-weight="' + l.weight + '" fill="' + l.color + '">' + l.text + '</text>';
+    }).join('');
+  }
+
   var statusLine = document.getElementById('statusLine');
   var undoBtn = document.getElementById('undoBtn');
   var pieSvg = document.getElementById('pie');
@@ -799,7 +806,6 @@
   var modeMoneyBtn = document.getElementById('modeMoneyBtn');
   var timeSection = document.getElementById('timeSection');
   var moneySection = document.getElementById('moneySection');
-  var moneyTotalLine = document.getElementById('moneyTotalLine');
   var undoExpenseBtn = document.getElementById('undoExpenseBtn');
   var moneyCard = document.getElementById('moneyCard');
   var moneyButtonsEl = document.getElementById('moneyButtons');
@@ -1093,18 +1099,11 @@
     var order = data.order;
     var total = order.reduce(function(sum,k){ return sum + data.vals[k]; }, 0);
 
-    moneyTotalLine.textContent = formatWon(total) + ' this month';
     undoExpenseBtn.style.display = expenses.length ? 'block' : 'none';
 
     if(moneyBudget > 0){
-      var remaining = moneyBudget - total;
-      if(remaining >= 0){
-        moneyBudgetLine.textContent = formatWon(remaining) + ' left of your ' + formatWon(moneyBudget) + ' budget';
-        moneyBudgetLine.style.color = 'var(--text-dim)';
-      } else {
-        moneyBudgetLine.textContent = formatWon(-remaining) + ' over your ' + formatWon(moneyBudget) + ' budget';
-        moneyBudgetLine.style.color = '#E2574C';
-      }
+      moneyBudgetLine.textContent = formatWon(total) + ' spent out of ' + formatWon(moneyBudget);
+      moneyBudgetLine.style.color = total > moneyBudget ? '#E2574C' : 'var(--text-dim)';
     } else {
       moneyBudgetLine.textContent = '+ Set a monthly budget';
       moneyBudgetLine.style.color = 'var(--text-dim)';
@@ -1116,14 +1115,33 @@
       '<button class="month-arrow" id="nextMoneyMonth">\u203A</button>' +
       '</div>';
 
-    if(data.rows.length === 0){
+    if(data.rows.length === 0 && moneyBudget <= 0){
       moneyCard.innerHTML = nav + '<div class="history-empty">Nothing logged this month.</div>';
       wireMoneyMonthNav();
       return;
     }
 
-    var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + buildDonut(data.vals, order) + '</svg></div>';
-    var legendHtml = '<div class="legend">' + buildLegend(data.vals, order, formatWon) + '</div>';
+    // the pie shows actual category spending, plus (when a budget is set) a
+    // gray "Remaining" slice sized to whatever's left of the budget, so the
+    // whole ring represents the budget itself rather than just spending
+    var chartVals = Object.assign({}, data.vals);
+    var chartOrder = data.order.slice();
+    var centerHtml = '';
+    if(moneyBudget > 0){
+      var remaining = moneyBudget - total;
+      var isOver = remaining < 0;
+      chartVals.budgetRemaining = Math.max(0, remaining);
+      chartOrder.push('budgetRemaining');
+      COLORS.budgetRemaining = '#3A3F4B';
+      LABELS.budgetRemaining = 'Remaining';
+      centerHtml = buildDonutCenterText([
+        { text: formatWon(Math.abs(remaining)), size:16, weight:700, color: isOver ? '#E2574C' : '#EDEEF2', dy:-3 },
+        { text: isOver ? 'over budget' : 'left this month', size:9, weight:600, color:'#8B909C', dy:12 }
+      ]);
+    }
+
+    var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + buildDonut(chartVals, chartOrder) + centerHtml + '</svg></div>';
+    var legendHtml = '<div class="legend">' + buildLegend(chartVals, chartOrder, formatWon) + '</div>';
 
     var body = data.rows.map(function(e){
       var d = new Date(e.date);

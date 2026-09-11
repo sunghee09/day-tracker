@@ -1127,6 +1127,7 @@
     var chartVals = Object.assign({}, data.vals);
     var chartOrder = data.order.slice();
     var centerHtml = '';
+    var hasCenterTap = false;
     if(moneyBudget > 0){
       var remaining = moneyBudget - total;
       var isOver = remaining < 0;
@@ -1134,10 +1135,12 @@
       chartOrder.push('budgetRemaining');
       COLORS.budgetRemaining = '#3A3F4B';
       LABELS.budgetRemaining = 'Remaining';
-      centerHtml = buildDonutCenterText([
-        { text: formatWon(Math.abs(remaining)), size:16, weight:700, color: isOver ? '#E2574C' : '#EDEEF2', dy:-3 },
-        { text: isOver ? 'over budget' : 'left this month', size:9, weight:600, color:'#8B909C', dy:12 }
-      ]);
+      centerHtml = '<circle cx="100" cy="100" r="55" fill="transparent" id="pieCenterTap" style="cursor:pointer;"></circle>' +
+        buildDonutCenterText([
+          { text: formatWon(Math.abs(remaining)), size:16, weight:700, color: isOver ? '#E2574C' : '#EDEEF2', dy:-3 },
+          { text: isOver ? 'over budget' : 'left this month', size:9, weight:600, color:'#8B909C', dy:12 }
+        ]);
+      hasCenterTap = true;
     }
 
     var chart = '<div class="chart-wrap"><svg viewBox="0 0 200 200" width="200" height="200">' + buildDonut(chartVals, chartOrder) + centerHtml + '</svg></div>';
@@ -1153,6 +1156,10 @@
     var table = '<table class="history-table money-table"><thead><tr><th>Date</th><th>Category</th><th>Amount</th></tr></thead><tbody>' + body + '</tbody></table>';
 
     moneyCard.innerHTML = nav + chart + legendHtml + table;
+    if(hasCenterTap){
+      var centerTapEl = document.getElementById('pieCenterTap');
+      if(centerTapEl) centerTapEl.addEventListener('click', openMoneyBudgetPrompt);
+    }
     wireMoneyMonthNav();
   }
 

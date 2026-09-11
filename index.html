@@ -371,6 +371,20 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="budgetModalOverlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-title">Monthly budget</div>
+      <div class="amount-field">
+        <span class="amount-prefix">₩</span>
+        <input class="modal-input amount-input" id="budgetAmountInput" type="text" inputmode="numeric" placeholder="0">
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn-secondary" id="budgetCancelBtn">Cancel</button>
+        <button class="modal-btn-primary" id="budgetSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="manualTimeModalOverlay" style="display:none;">
     <div class="modal-box">
       <div class="modal-title">Add a past entry</div>
@@ -816,6 +830,10 @@
   var expenseScanBtn = document.getElementById('expenseScanBtn');
   var expenseCancelBtn = document.getElementById('expenseCancelBtn');
   var expenseSaveBtn = document.getElementById('expenseSaveBtn');
+  var budgetModalOverlay = document.getElementById('budgetModalOverlay');
+  var budgetAmountInput = document.getElementById('budgetAmountInput');
+  var budgetCancelBtn = document.getElementById('budgetCancelBtn');
+  var budgetSaveBtn = document.getElementById('budgetSaveBtn');
   var installmentToggle = document.getElementById('installmentToggle');
   var installmentPanel = document.getElementById('installmentPanel');
   var installmentChips = document.getElementById('installmentChips');
@@ -1406,12 +1424,18 @@
   }
 
   function openMoneyBudgetPrompt(){
-    var current = moneyBudget > 0 ? String(moneyBudget) : '';
-    var input = window.prompt('Monthly spending budget (\u20A9), or clear the field to remove it:', current);
-    if(input === null) return;
-    var cleaned = String(input).replace(/[^0-9]/g, '');
+    budgetAmountInput.value = moneyBudget > 0 ? formatAmountDigits(String(moneyBudget)) : '';
+    budgetModalOverlay.style.display = 'flex';
+    setTimeout(function(){ budgetAmountInput.focus(); }, 30);
+  }
+  function closeBudgetModal(){
+    budgetModalOverlay.style.display = 'none';
+  }
+  function saveBudgetFromModal(){
+    var cleaned = rawAmountValue(budgetAmountInput.value);
     moneyBudget = cleaned ? parseInt(cleaned, 10) : 0;
     saveMoneyBudget(moneyBudget);
+    closeBudgetModal();
     renderMoney();
   }
 
@@ -1477,6 +1501,17 @@
 
   undoExpenseBtn.addEventListener('click', undoLastExpense);
   moneyBudgetLine.addEventListener('click', openMoneyBudgetPrompt);
+  budgetAmountInput.addEventListener('input', function(){
+    budgetAmountInput.value = formatAmountDigits(budgetAmountInput.value);
+  });
+  budgetAmountInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') saveBudgetFromModal();
+  });
+  budgetCancelBtn.addEventListener('click', closeBudgetModal);
+  budgetSaveBtn.addEventListener('click', saveBudgetFromModal);
+  budgetModalOverlay.addEventListener('click', function(e){
+    if(e.target === budgetModalOverlay) closeBudgetModal();
+  });
   scanFileInput.addEventListener('change', function(e){
     var file = e.target.files && e.target.files[0];
     scanFileInput.value = '';

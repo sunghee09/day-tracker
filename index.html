@@ -203,6 +203,9 @@
   .history-table td{ font-size:12px; padding:10px 3px; border-top:1px solid var(--border); text-align:right; }
   .history-table td:first-child{ text-align:left; color:var(--text); font-weight:600; }
   .money-table td:nth-child(2){ text-align:left; color:var(--text-dim); font-weight:400; }
+  .money-table tbody tr{ cursor:pointer; }
+  .money-table tbody tr:active{ background:var(--border); }
+  .row-note{ display:block; font-size:10px; color:var(--text-faint); margin-top:2px; font-weight:400; }
   .modal-overlay{
     position:fixed; inset:0;
     background:rgba(10,11,14,0.7);
@@ -258,6 +261,7 @@
     pointer-events:none;
   }
   .modal-input.amount-input{ padding-left:32px; }
+  .modal-input.note-input{ margin-top:10px; font-size:15px; padding:12px 14px; }
   .installment-toggle{
     display:flex; align-items:center; gap:8px;
     font-size:14px; color:var(--text-dim);
@@ -354,6 +358,7 @@
         <span class="amount-prefix">₩</span>
         <input class="modal-input amount-input" id="expenseAmountInput" type="text" inputmode="numeric" placeholder="0">
       </div>
+      <input class="modal-input note-input" id="expenseNoteInput" type="text" placeholder="Name (optional)">
       <label class="installment-toggle">
         <input type="checkbox" id="installmentToggle">
         Split into installments
@@ -610,6 +615,11 @@
   function formatWon(n){
     return '\u20A9' + Math.round(n).toLocaleString('en-US');
   }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
 
   function computeTodayTotals(){
     var boundStart = startOfToday();
@@ -827,6 +837,7 @@
   var expenseModalOverlay = document.getElementById('expenseModalOverlay');
   var expenseModalTitle = document.getElementById('expenseModalTitle');
   var expenseAmountInput = document.getElementById('expenseAmountInput');
+  var expenseNoteInput = document.getElementById('expenseNoteInput');
   var expenseScanBtn = document.getElementById('expenseScanBtn');
   var expenseCancelBtn = document.getElementById('expenseCancelBtn');
   var expenseSaveBtn = document.getElementById('expenseSaveBtn');
@@ -1119,7 +1130,12 @@
 
     undoExpenseBtn.style.display = expenses.length ? 'block' : 'none';
 
-    if(moneyBudget > 0){
+    var isCurrentMonth = viewMonthMoney === currentMonthKey();
+
+    if(!isCurrentMonth){
+      moneyBudgetLine.textContent = formatWon(total) + ' spent in ' + formatMonthKey(viewMonthMoney);
+      moneyBudgetLine.style.color = 'var(--text-dim)';
+    } else if(moneyBudget > 0){
       moneyBudgetLine.textContent = formatWon(total) + ' spent out of ' + formatWon(moneyBudget);
       moneyBudgetLine.style.color = total > moneyBudget ? '#E2574C' : 'var(--text-dim)';
     } else {
@@ -1133,7 +1149,7 @@
       '<button class="month-arrow" id="nextMoneyMonth">\u203A</button>' +
       '</div>';
 
-    if(data.rows.length === 0 && moneyBudget <= 0){
+    if(data.rows.length === 0 && (!isCurrentMonth || moneyBudget <= 0)){
       moneyCard.innerHTML = nav + '<div class="history-empty">Nothing logged this month.</div>';
       wireMoneyMonthNav();
       return;
@@ -1146,7 +1162,7 @@
     var chartOrder = data.order.slice();
     var centerHtml = '';
     var hasCenterTap = false;
-    if(moneyBudget > 0){
+    if(isCurrentMonth && moneyBudget > 0){
       var remaining = moneyBudget - total;
       var isOver = remaining < 0;
       chartVals.budgetRemaining = Math.max(0, remaining);
@@ -1165,11 +1181,13 @@
     var legendHtml = '<div class="legend">' + buildLegend(chartVals, chartOrder, formatWon) + '</div>';
 
     var body = data.rows.map(function(e){
+      var rowIdx = expenses.indexOf(e);
       var d = new Date(e.date);
       var dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
       var label = LABELS[e.category] || e.category;
       if(e.installment) label += ' (' + e.installment.index + '/' + e.installment.total + ')';
-      return '<tr><td>' + dateStr + '</td><td>' + label + '</td><td>' + formatWon(e.amount) + '</td></tr>';
+      var noteHtml = e.note ? '<span class="row-note">' + escapeHtml(e.note) + '</span>' : '';
+      return '<tr data-expense-idx="' + rowIdx + '"><td>' + dateStr + '</td><td>' + label + noteHtml + '</td><td>' + formatWon(e.amount) + '</td></tr>';
     }).join('');
     var table = '<table class="history-table money-table"><thead><tr><th>Date</th><th>Category</th><th>Amount</th></tr></thead><tbody>' + body + '</tbody></table>';
 
@@ -1178,7 +1196,34 @@
       var centerTapEl = document.getElementById('pieCenterTap');
       if(centerTapEl) centerTapEl.addEventListener('click', openMoneyBudgetPrompt);
     }
+    var rowEls = moneyCard.querySelectorAll('[data-expense-idx]');
+    for(var i=0;i<rowEls.length;i++){
+      (function(tr){
+        tr.addEventListener('click', function(){
+          var idx = parseInt(tr.getAttribute('data-expense-idx'), 10);
+          deleteExpenseAt(idx);
+        });
+      })(rowEls[i]);
+    }
     wireMoneyMonthNav();
+  }
+
+  // tap-to-delete on a history row: confirms with the entry's details, then
+  // removes exactly that entry from the master list (indexOf lookup above
+  // works because computeMoneyMonth's rows hold the same object references,
+  // not copies, regardless of the table's newest-first sort order)
+  function deleteExpenseAt(idx){
+    var e = expenses[idx];
+    if(!e) return;
+    var label = LABELS[e.category] || e.category;
+    if(e.installment) label += ' (' + e.installment.index + '/' + e.installment.total + ')';
+    var d = new Date(e.date);
+    var dateStr = d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+    var msg = 'Delete ' + formatWon(e.amount) + ' for ' + label + ' on ' + dateStr + (e.note ? ' (' + e.note + ')' : '') + '?';
+    if(!window.confirm(msg)) return;
+    expenses.splice(idx, 1);
+    saveExpenses(expenses);
+    renderMoney();
   }
 
   function wireMoneyMonthNav(){
@@ -1256,8 +1301,10 @@
     renderMoney();
   }
 
-  function commitExpense(category, amount){
-    expenses.push({ category: category, amount: Math.round(amount), date: new Date().toISOString() });
+  function commitExpense(category, amount, note){
+    var entry = { category: category, amount: Math.round(amount), date: new Date().toISOString() };
+    if(note) entry.note = note;
+    expenses.push(entry);
     saveExpenses(expenses);
     renderMoney();
   }
@@ -1266,7 +1313,7 @@
   // so on (clamped so odd days like the 31st never skip a short month).
   // Rounding remainder goes to the earliest months, one won at a time, so
   // the entries always sum to exactly the original total.
-  function commitInstallments(category, totalAmount, months){
+  function commitInstallments(category, totalAmount, months, note){
     var groupId = 'grp_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
     var base = Math.floor(totalAmount / months);
     var remainder = totalAmount - base * months;
@@ -1274,12 +1321,14 @@
     for(var i = 0; i < months; i++){
       var amt = base + (i < remainder ? 1 : 0);
       var d = addMonthsClamped(now, i);
-      expenses.push({
+      var entry = {
         category: category,
         amount: amt,
         date: d.toISOString(),
         installment: { groupId: groupId, index: i + 1, total: months }
-      });
+      };
+      if(note) entry.note = note;
+      expenses.push(entry);
     }
     saveExpenses(expenses);
     renderMoney();
@@ -1328,6 +1377,7 @@
     activeExpenseCategory = category;
     expenseModalTitle.textContent = LABELS[category] || category;
     expenseAmountInput.value = '';
+    expenseNoteInput.value = '';
     resetScanButton();
     installmentToggle.checked = false;
     installmentPanel.style.display = 'none';
@@ -1350,10 +1400,11 @@
       window.alert('Enter a number greater than 0.');
       return;
     }
+    var note = expenseNoteInput.value.trim();
     if(installmentToggle.checked && selectedInstallmentMonths > 1){
-      commitInstallments(activeExpenseCategory, Math.round(n), selectedInstallmentMonths);
+      commitInstallments(activeExpenseCategory, Math.round(n), selectedInstallmentMonths, note);
     } else {
-      commitExpense(activeExpenseCategory, n);
+      commitExpense(activeExpenseCategory, n, note);
     }
     closeExpenseModal();
   }

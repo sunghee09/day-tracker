@@ -236,6 +236,7 @@
     -webkit-appearance:none;
     appearance:none;
   }
+  .modal-input[type="time"]{ font-size:16px; padding:14px 10px; min-width:0; }
   .modal-actions{ display:flex; gap:10px; margin-top:16px; }
   .modal-btn-secondary, .modal-btn-primary{
     flex:1;
@@ -292,6 +293,94 @@
   }
   .installment-chip[data-selected="true"]{ border-color:var(--text); background:var(--text); color:var(--bg); }
   .installment-preview{ font-size:13px; color:var(--text-dim); }
+  .day-chips{ display:flex; gap:4px; margin-bottom:4px; }
+  .day-chip{
+    flex:1; min-width:0;
+    padding:12px 0;
+    border-radius:10px;
+    font-size:12px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    font-family:inherit;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .day-chip[data-selected="true"]{ border-color:var(--text); background:var(--text); color:var(--bg); }
+  .repeat-list{ margin-top:14px; }
+  .repeat-row{ display:flex; align-items:center; gap:8px; min-height:44px; border-top:1px solid var(--border); font-size:13px; }
+  .repeat-info{ flex:1; min-width:0; color:var(--text-dim); }
+  .repeat-info b{ color:var(--text); font-weight:600; }
+  .repeat-sub{ display:block; font-size:11px; color:var(--text-faint); margin-top:2px; }
+  .undo.repeat-stop{ padding:14px 0 14px 12px; font-size:13px; }
+  .plan-rep{ font-size:10px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.3px; margin-left:6px; }
+  .nudge-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-left:3px solid var(--productive);
+    border-radius:14px;
+    padding:14px 14px 12px;
+    margin-bottom:12px;
+  }
+  .nudge-title{ font-size:14px; font-weight:700; }
+  .nudge-sub{ font-size:12px; color:var(--text-dim); margin-top:4px; line-height:1.4; }
+  .nudge-sub b{ color:var(--text); }
+  .nudge-actions{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .nudge-btn{
+    padding:8px 12px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:600;
+    font-family:inherit;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .nudge-btn.primary{ background:var(--text); color:var(--bg); border-color:var(--text); }
+  .nudge-times{ display:flex; gap:8px; margin-top:10px; align-items:center; font-size:12px; color:var(--text-dim); }
+  .nudge-times input{
+    flex:1; min-width:0;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg);
+    color:var(--text);
+    font-size:15px;
+    font-family:inherit;
+    -webkit-appearance:none;
+    appearance:none;
+  }
+  .plan-card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:12px 14px 4px;
+    margin-bottom:12px;
+  }
+  .plan-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+  .plan-title{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.3px; font-weight:600; }
+  .plan-row{ display:flex; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--border); font-size:13px; }
+  .plan-label{ flex:1; color:var(--text-dim); }
+  .plan-time{ color:var(--text-dim); font-size:12px; }
+  .plan-live .plan-label, .plan-live .plan-time{ color:var(--text); font-weight:600; }
+  .plan-more{ font-size:11px; color:var(--text-faint); padding:2px 0 10px; }
+  .quest-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--border); font-size:14px; }
+  .quest-name{ flex:1; }
+  .quest-del{
+    width:30px; height:30px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:transparent;
+    color:var(--text-dim);
+    font-size:13px;
+    cursor:pointer;
+    -webkit-appearance:none;
+    appearance:none;
+  }
 </style>
 </head>
 <body>
@@ -319,6 +408,9 @@
       <div class="status" id="statusLine">Nothing running</div>
       <button class="undo" id="undoBtn" style="display:none;">undo last</button>
     </div>
+
+    <div class="nudge-card" id="nudgeCard" style="display:none;"></div>
+    <div class="plan-card" id="planCard" style="display:none;"></div>
 
     <div class="tabs">
       <button class="tab" id="tabToday" data-active="true">Today</button>
@@ -401,11 +493,11 @@
       <input class="modal-input" id="manualDateInput" type="date" style="margin-bottom:12px;">
 
       <div style="display:flex; gap:10px;">
-        <div style="flex:1;">
+        <div style="flex:1; min-width:0;">
           <div class="installment-label">From</div>
           <input class="modal-input" id="manualStartInput" type="time">
         </div>
-        <div style="flex:1;">
+        <div style="flex:1; min-width:0;">
           <div class="installment-label">To</div>
           <input class="modal-input" id="manualEndInput" type="time">
         </div>
@@ -414,6 +506,54 @@
       <div class="modal-actions">
         <button class="modal-btn-secondary" id="manualCancelBtn">Cancel</button>
         <button class="modal-btn-primary" id="manualSaveBtn">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="planModalOverlay" style="display:none;">
+    <div class="modal-box" style="max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+      <div class="modal-title">Plan my day</div>
+
+      <div class="installment-label" style="margin-top:0;">Category</div>
+      <div class="installment-chips" id="planCategoryChips"></div>
+
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1; min-width:0;">
+          <div class="installment-label">From</div>
+          <input class="modal-input" id="planStartInput" type="time">
+        </div>
+        <div style="flex:1; min-width:0;">
+          <div class="installment-label">To</div>
+          <input class="modal-input" id="planEndInput" type="time">
+        </div>
+      </div>
+
+      <label class="installment-toggle">
+        <input type="checkbox" id="planBreakToggle" checked>
+        15-min break after each hour
+      </label>
+
+      <div class="installment-label" style="margin-top:16px;">Repeat</div>
+      <div class="installment-chips" id="planRepeatChips" style="margin-bottom:8px;"></div>
+      <div class="day-chips" id="planDayChips" style="display:none;"></div>
+
+      <div class="installment-preview" id="planPreview" style="margin-top:10px;"></div>
+      <div id="planRepeatList"></div>
+
+      <div class="modal-actions">
+        <button class="modal-btn-secondary" id="planCancelBtn">Cancel</button>
+        <button class="modal-btn-primary" id="planSaveBtn">Plan it</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="questModalOverlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-title">Side quests</div>
+      <div id="questList"></div>
+      <button class="btn btn-dashed" id="questAddBtn" style="margin:12px 0 0; width:100%;">+ Add side quest</button>
+      <div class="modal-actions">
+        <button class="modal-btn-primary" id="questDoneBtn">Done</button>
       </div>
     </div>
   </div>
@@ -634,6 +774,18 @@
       var ms2 = overlapMs(active.start, new Date().toISOString(), boundStart, boundEnd);
       if(totals[active.type] !== undefined) totals[active.type] += ms2;
     }
+    // a planned block that is running right now counts live, minus anything
+    // already tracked by hand over the same minutes
+    var nowMs = Date.now();
+    plan.forEach(function(b){
+      if(b.kind !== 'work' || totals[b.type] === undefined) return;
+      var ps = new Date(b.start).getTime(), pe = new Date(b.end).getTime();
+      if(ps < nowMs && pe > nowMs){
+        freeSegments(ps, nowMs).forEach(function(seg){
+          totals[b.type] += Math.max(0, Math.min(seg[1], boundEnd) - Math.max(seg[0], boundStart));
+        });
+      }
+    });
     var DAY_MS = boundEnd - boundStart;
     var used = 0;
     timeCategories.forEach(function(c){ used += totals[c.id]; });
@@ -864,6 +1016,23 @@
   var menuTriggerBtn = document.getElementById('menuTriggerBtn');
   var menuDropdown = document.getElementById('menuDropdown');
   var moneyBudgetLine = document.getElementById('moneyBudgetLine');
+  var nudgeCard = document.getElementById('nudgeCard');
+  var planCard = document.getElementById('planCard');
+  var planModalOverlay = document.getElementById('planModalOverlay');
+  var planCategoryChips = document.getElementById('planCategoryChips');
+  var planStartInput = document.getElementById('planStartInput');
+  var planEndInput = document.getElementById('planEndInput');
+  var planBreakToggle = document.getElementById('planBreakToggle');
+  var planPreview = document.getElementById('planPreview');
+  var planRepeatChips = document.getElementById('planRepeatChips');
+  var planDayChips = document.getElementById('planDayChips');
+  var planRepeatList = document.getElementById('planRepeatList');
+  var planCancelBtn = document.getElementById('planCancelBtn');
+  var planSaveBtn = document.getElementById('planSaveBtn');
+  var questModalOverlay = document.getElementById('questModalOverlay');
+  var questList = document.getElementById('questList');
+  var questAddBtn = document.getElementById('questAddBtn');
+  var questDoneBtn = document.getElementById('questDoneBtn');
 
   dateLabel.textContent = new Date().toLocaleDateString(undefined, { weekday:'long', month:'long', day:'numeric' });
 
@@ -971,8 +1140,7 @@
       var sure = window.confirm('Remove the "' + cat.label + '" button? Time already logged under it folds into Other going forward, it is not deleted.');
       if(!sure) return;
       if(active && active.type === id){
-        sessions.push({ type: id, start: active.start, end: new Date().toISOString() });
-        saveSessions(sessions);
+        closeActive(new Date().toISOString());
         active = null;
         saveActive(null);
       }
@@ -1007,10 +1175,23 @@
     if(active){
       var elapsed = Date.now() - new Date(active.start).getTime();
       statusLine.style.color = COLORS[active.type] || 'var(--text)';
-      statusLine.textContent = (LABELS[active.type] || active.type) + ' running \u00B7 ' + formatClock(elapsed);
+      if(active.quest){
+        statusLine.textContent = active.quest.label + ' \u00B7 ' + formatClock(Math.max(0, active.quest.limitMs - elapsed)) + ' left';
+      } else {
+        statusLine.textContent = (LABELS[active.type] || active.type) + ' running \u00B7 ' + formatClock(elapsed);
+      }
     } else {
-      statusLine.style.color = 'var(--text-faint)';
-      statusLine.textContent = 'Nothing running';
+      var pb = currentPlanBlock();
+      if(pb && pb.kind === 'break'){
+        statusLine.style.color = 'var(--text-dim)';
+        statusLine.textContent = 'Break until ' + fmtTod(new Date(pb.end).getTime());
+      } else if(pb){
+        statusLine.style.color = COLORS[pb.type] || 'var(--text)';
+        statusLine.textContent = 'Planned: ' + (LABELS[pb.type] || pb.type) + ' until ' + fmtTod(new Date(pb.end).getTime());
+      } else {
+        statusLine.style.color = 'var(--text-faint)';
+        statusLine.textContent = 'Nothing running';
+      }
     }
 
     undoBtn.style.display = (sessions.length > 0 || active) ? 'block' : 'none';
@@ -1035,13 +1216,11 @@
     historyDirty = true;
     var nowIso = new Date().toISOString();
     if(active && active.type === type){
-      sessions.push({ type: type, start: active.start, end: nowIso });
-      saveSessions(sessions);
+      closeActive(nowIso);
       active = null;
       saveActive(null);
     } else if(active){
-      sessions.push({ type: active.type, start: active.start, end: nowIso });
-      saveSessions(sessions);
+      closeActive(nowIso);
       active = { type: type, start: nowIso };
       saveActive(active);
     } else {
@@ -1490,10 +1669,782 @@
     renderMoney();
   }
 
+  // ===== Plan my day · catch-up prompts · side quests =====
+  // New day-agnostic keys: dtk_plan, dtk_quests, dtk_nudge. Planned time only
+  // ever lands in dtk_sessions as ordinary {type,start,end} entries, so the
+  // pie, history and undo keep working exactly as before. A web app can't run
+  // while it's closed, so everything here is worked out when the app opens,
+  // comes back to the front, or ticks while open.
+  var MIN_MS = 60000;
+  var BREAK_MIN = 15;
+  var WORK_BLOCK_MIN = 60;
+  var STOP_PROMPT_MS = 4*3600*1000;          // "still going?" after this long
+  var SLEEP_STOP_PROMPT_MS = 12*3600*1000;   // Sleep is allowed to run longer
+  var GAP_PROMPT_MS = 45*60*1000;            // ignore untracked gaps shorter than this
+  var GAP_LOOKBACK_MS = 16*3600*1000;        // never suggest filling more than this far back
+  var QUEST_QUIET_UNTIL_HOUR = 8;            // no side-quest ideas from midnight to 8 AM
+  var QUEST_BREAK_BUFFER_MS = 20*60*1000;    // breaks stay clear: no quest ideas for 20 min after a timer stops
+  var SNOOZE_MS = 2*3600*1000;
+  var DEFAULT_QUESTS = [
+    { id:'q_photos', label:'Organize Instagram photos', minutes:30 },
+    { id:'q_slides', label:'Work on presentation', minutes:30 }
+  ];
+
+  function loadJson(key, fallback){
+    try{
+      var raw = localStorage.getItem(key);
+      if(raw !== null) return JSON.parse(raw);
+    }catch(e){}
+    return fallback;
+  }
+  function saveJson(key, value){
+    try{ localStorage.setItem(key, JSON.stringify(value)); }catch(e){}
+  }
+
+  var plan = loadJson('dtk_plan', []);
+  if(!Array.isArray(plan)) plan = [];
+
+  // Repeating plans: small templates {id,type,from,to,breaks,days,done}. Each
+  // day the app is open, a template turns into ordinary plan blocks (tagged
+  // rep:<id>). `done` remembers which days were already handled so a block
+  // that got logged, cut short or skipped is never created a second time.
+  var DAY_MS = 24*3600*1000;
+  var DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var DAY_ORDER = [1,2,3,4,5,6,0];                 // shown Monday first
+  var REPEAT_DONE_KEEP = 5;
+  function sanitizeRepeats(list){
+    if(!Array.isArray(list)) return [];
+    var out = [];
+    list.forEach(function(r){
+      if(!r || typeof r.id !== 'string' || typeof r.type !== 'string') return;
+      var re = /^\d\d:\d\d$/;
+      if(!re.test(r.from) || !re.test(r.to) || !Array.isArray(r.days)) return;
+      var days = [];
+      r.days.forEach(function(d){
+        if(typeof d === 'number' && d >= 0 && d <= 6 && d === Math.floor(d) && days.indexOf(d) < 0) days.push(d);
+      });
+      if(!days.length) return;
+      var f = r.from.split(':'), t = r.to.split(':');
+      var span = (Number(t[0])*60 + Number(t[1])) - (Number(f[0])*60 + Number(f[1]));
+      if(span <= 0) span += 24*60;
+      if(span > 16*60) return;                       // same 16-hour limit as the modal
+      var done = Array.isArray(r.done) ? r.done.filter(function(k){ return typeof k === 'string'; }) : [];
+      out.push({ id:r.id, type:r.type, from:r.from, to:r.to, breaks:r.breaks !== false, days:days, done:done.slice(-REPEAT_DONE_KEEP) });
+    });
+    return out;
+  }
+  var repeats = sanitizeRepeats(loadJson('dtk_plan_repeats', []));
+  var planRepeatMode = 'never';                    // never | daily | weekdays | custom
+  var planRepeatDays = [];
+  var quests = loadJson('dtk_quests', null);
+  if(!Array.isArray(quests)){
+    quests = DEFAULT_QUESTS.map(function(q){ return { id:q.id, label:q.label, minutes:q.minutes, last:null }; });
+  }
+  var nudgeState = loadJson('dtk_nudge', {});
+  if(!nudgeState || typeof nudgeState !== 'object' || Array.isArray(nudgeState)) nudgeState = {};
+  var nudge = null;
+  var nudgeSigShown = null;
+  var planHtmlShown = null;
+  var questSkipped = [];
+  var lastNudgeCheckAt = 0;
+  var planSelectedCategory = null;
+
+  function fmtTod(ms){
+    return new Date(ms).toLocaleTimeString(undefined, { hour:'numeric', minute:'2-digit' });
+  }
+  function toHHMM(ms){
+    var d = new Date(ms);
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  // the most recent moment at or before refMs that reads HH:MM on the clock
+  function latestTimeBefore(str, refMs){
+    var p = str.split(':');
+    var d = new Date(refMs);
+    d.setHours(Number(p[0]), Number(p[1]), 0, 0);
+    if(d.getTime() > refMs) d.setDate(d.getDate() - 1);
+    return d.getTime();
+  }
+  function timeOnDay(baseMs, str){
+    var p = str.split(':');
+    var d = new Date(baseMs);
+    d.setHours(Number(p[0]), Number(p[1]), 0, 0);
+    return d.getTime();
+  }
+
+  // closes the running timer into a normal session. If it was a timed side
+  // quest, that quest is also marked as just done so the next suggestion
+  // rotates to a different one.
+  function closeActive(endIso){
+    if(!active) return;
+    sessions.push({ type: active.type, start: active.start, end: endIso });
+    if(active.quest) markQuestDone(active.quest.id, new Date(endIso).getTime());
+    saveSessions(sessions);
+  }
+  function markQuestDone(id, ms){
+    for(var i = 0; i < quests.length; i++){
+      if(quests[i].id === id){ quests[i].last = new Date(ms).toISOString(); }
+    }
+    saveJson('dtk_quests', quests);
+  }
+
+  // the parts of [startMs,endMs] not already covered by tracked time or a
+  // running timer. Manual tracking always wins over the plan, so nothing is
+  // ever counted twice.
+  function freeSegments(startMs, endMs){
+    var busy = [];
+    sessions.forEach(function(s){
+      var a = new Date(s.start).getTime(), b = new Date(s.end).getTime();
+      if(b > startMs && a < endMs) busy.push([Math.max(a, startMs), Math.min(b, endMs)]);
+    });
+    if(active){
+      var as = new Date(active.start).getTime();
+      if(as < endMs) busy.push([Math.max(as, startMs), endMs]);
+    }
+    busy.sort(function(x, y){ return x[0] - y[0]; });
+    var out = [], cursor = startMs;
+    busy.forEach(function(iv){
+      if(iv[0] > cursor) out.push([cursor, iv[0]]);
+      if(iv[1] > cursor) cursor = iv[1];
+    });
+    if(cursor < endMs) out.push([cursor, endMs]);
+    return out.filter(function(seg){ return seg[1] - seg[0] >= MIN_MS; });
+  }
+
+  // ---- plan my day ----
+  // 1-hour work blocks with a 15-minute break after each. A leftover shorter
+  // than a break plus 15 minutes is folded into the last work block instead
+  // of leaving a tiny sliver.
+  function buildPlanBlocks(type, startMs, endMs, withBreaks){
+    var blocks = [], cursor = startMs;
+    while(cursor < endMs){
+      var workEnd = withBreaks ? Math.min(cursor + WORK_BLOCK_MIN*MIN_MS, endMs) : endMs;
+      if(withBreaks && endMs - workEnd <= (BREAK_MIN + 15)*MIN_MS) workEnd = endMs;
+      blocks.push({ kind:'work', type:type, start:new Date(cursor).toISOString(), end:new Date(workEnd).toISOString() });
+      cursor = workEnd;
+      if(withBreaks && cursor < endMs){
+        var breakEnd = cursor + BREAK_MIN*MIN_MS;
+        blocks.push({ kind:'break', start:new Date(cursor).toISOString(), end:new Date(breakEnd).toISOString() });
+        cursor = breakEnd;
+      }
+    }
+    return blocks;
+  }
+
+  function dayKey(ms){
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+
+  // Turns repeating templates into real plan blocks for today, plus
+  // yesterday's run if it crossed midnight into today. Older missed days are
+  // never filled in. A run that overlaps blocks already in the plan is skipped
+  // (what you planned by hand wins). Returns true if blocks were added.
+  function applyRepeats(){
+    if(!repeats.length) return false;
+    var now = Date.now(), t0 = new Date(now);
+    t0.setHours(0, 0, 0, 0);
+    t0 = t0.getTime();
+    var touched = false, added = false;
+    repeats.forEach(function(r){
+      if(!timeCategories.some(function(c){ return c.id === r.type; })) return;   // category was deleted
+      [-1, 0].forEach(function(off){
+        var base = new Date(t0);
+        base.setDate(base.getDate() + off);
+        var key = dayKey(base.getTime());
+        if(r.days.indexOf(base.getDay()) < 0 || r.done.indexOf(key) >= 0) return;
+        var st = timeOnDay(base.getTime(), r.from), en = timeOnDay(base.getTime(), r.to);
+        if(en <= st) en += DAY_MS;
+        if(off === -1 && en <= t0) return;            // yesterday only counts if it runs into today
+        r.done.push(key);
+        touched = true;
+        var clash = plan.some(function(b){
+          return new Date(b.start).getTime() < en && new Date(b.end).getTime() > st;
+        });
+        if(clash) return;
+        buildPlanBlocks(r.type, st, en, r.breaks).forEach(function(b){
+          b.rep = r.id;
+          plan.push(b);
+        });
+        added = true;
+      });
+      r.done.sort();
+      r.done = r.done.slice(-REPEAT_DONE_KEEP);
+    });
+    if(touched) saveJson('dtk_plan_repeats', repeats);
+    if(added){
+      plan.sort(function(a, b){ return new Date(a.start).getTime() - new Date(b.start).getTime(); });
+      saveJson('dtk_plan', plan);
+    }
+    return added;
+  }
+
+  // logs every planned block that has finished; unfinished ones stay queued
+  function syncPlan(){
+    var added = applyRepeats();
+    var now = Date.now(), changed = false, keep = [];
+    plan.forEach(function(b){
+      var end = new Date(b.end).getTime();
+      if(end > now){ keep.push(b); return; }
+      changed = true;
+      if(b.kind === 'work'){
+        var start = new Date(b.start).getTime();
+        freeSegments(start, end).forEach(function(seg){
+          sessions.push({ type:b.type, start:new Date(seg[0]).toISOString(), end:new Date(seg[1]).toISOString(), planned:true });
+        });
+      }
+    });
+    if(changed){
+      plan = keep;
+      saveJson('dtk_plan', plan);
+      saveSessions(sessions);
+      historyDirty = true;
+    }
+    return changed || added;
+  }
+
+  function endPlanNow(){
+    var now = Date.now(), next = [];
+    plan.forEach(function(b){
+      var s = new Date(b.start).getTime(), e = new Date(b.end).getTime();
+      if(e <= now){ next.push(b); return; }                                    // finished: gets logged below
+      if(s < now && b.kind === 'work'){ b.end = new Date(now).toISOString(); next.push(b); }   // running: cut at now
+      // anything not started yet, or a break in progress, is dropped
+    });
+    plan = next;
+    syncPlan();
+    saveJson('dtk_plan', plan);
+    historyDirty = true;
+    renderPlan();
+    render();
+    checkNudges();
+  }
+
+  function currentPlanBlock(){
+    var now = Date.now(), found = null;
+    plan.forEach(function(b){
+      var s = new Date(b.start).getTime(), e = new Date(b.end).getTime();
+      if(s <= now && e > now && (!found || b.kind === 'work')) found = b;
+    });
+    return found;
+  }
+  function planInProgress(now){
+    return plan.some(function(b){
+      return b.kind === 'work' && new Date(b.start).getTime() <= now && new Date(b.end).getTime() > now;
+    });
+  }
+  function planBreakNow(now){
+    return plan.some(function(b){
+      return b.kind === 'break' && new Date(b.start).getTime() <= now && new Date(b.end).getTime() > now;
+    });
+  }
+  function nextPlanWorkStart(now){
+    var best = Infinity;
+    plan.forEach(function(b){
+      var s = new Date(b.start).getTime();
+      if(b.kind === 'work' && s > now && s < best) best = s;
+    });
+    return best;
+  }
+
+  function renderPlan(){
+    var now = Date.now();
+    var upcoming = plan.filter(function(b){ return new Date(b.end).getTime() > now; });
+    var html = '';
+    if(upcoming.length){
+      var shown = upcoming.slice(0, 5);
+      html = '<div class="plan-head"><span class="plan-title">Plan</span>' +
+        '<button type="button" class="undo" data-act="endPlan">end plan now</button></div>' +
+        shown.map(function(b){
+          var s = new Date(b.start).getTime(), e = new Date(b.end).getTime();
+          var live = s <= now && e > now;
+          var isBreak = b.kind === 'break';
+          var label = isBreak ? 'Break' : (LABELS[b.type] || b.type);
+          var dot = isBreak ? 'var(--text-faint)' : (COLORS[b.type] || 'var(--text-dim)');
+          return '<div class="plan-row' + (live ? ' plan-live' : '') + '">' +
+            '<span class="dot" style="background:' + dot + ';"></span>' +
+            '<span class="plan-label">' + escapeHtml(label) + (b.rep ? '<span class="plan-rep">repeat</span>' : '') + '</span>' +
+            '<span class="plan-time">' + fmtTod(s) + '–' + fmtTod(e) + (live ? ' · now' : '') + '</span></div>';
+        }).join('') +
+        (upcoming.length > shown.length ? '<div class="plan-more">+' + (upcoming.length - shown.length) + ' more</div>' : '');
+    }
+    if(html === planHtmlShown) return;
+    planHtmlShown = html;
+    planCard.innerHTML = html;
+    planCard.style.display = html ? 'block' : 'none';
+  }
+
+  function renderPlanCategoryChips(){
+    planCategoryChips.innerHTML = timeCategories.map(function(c){
+      return '<button type="button" class="installment-chip" data-plan-type="' + c.id + '" data-selected="' + (c.id === planSelectedCategory) + '">' + escapeHtml(c.label) + '</button>';
+    }).join('');
+  }
+  function planRangeFromInputs(){
+    if(!planStartInput.value || !planEndInput.value) return null;
+    var base = Date.now();
+    var st = timeOnDay(base, planStartInput.value);
+    var en = timeOnDay(base, planEndInput.value);
+    if(en <= st) en += 24*3600*1000;      // an earlier end time means it runs past midnight
+    return [st, en];
+  }
+  // ---- repeat choices inside the plan modal ----
+  function repeatDaysFor(mode){
+    if(mode === 'daily') return [0,1,2,3,4,5,6];
+    if(mode === 'weekdays') return [1,2,3,4,5];
+    if(mode === 'custom') return planRepeatDays.slice();
+    return [];
+  }
+  function repeatPhrase(days){
+    if(days.length === 7) return 'Every day';
+    if(days.length === 5 && [1,2,3,4,5].every(function(d){ return days.indexOf(d) >= 0; })) return 'Every weekday';
+    return 'Every ' + DAY_ORDER.filter(function(d){ return days.indexOf(d) >= 0; }).map(function(d){ return DAY_NAMES[d]; }).join(', ');
+  }
+  function renderPlanRepeatChips(){
+    var opts = [['never','Never'], ['daily','Every day'], ['weekdays','Weekdays'], ['custom','Pick days']];
+    planRepeatChips.innerHTML = opts.map(function(o){
+      return '<button type="button" class="installment-chip" data-plan-repeat="' + o[0] + '" data-selected="' + (o[0] === planRepeatMode) + '">' + o[1] + '</button>';
+    }).join('');
+    planDayChips.style.display = planRepeatMode === 'custom' ? 'flex' : 'none';
+    planDayChips.innerHTML = DAY_ORDER.map(function(d){
+      return '<button type="button" class="day-chip" data-plan-day="' + d + '" data-selected="' + (planRepeatDays.indexOf(d) >= 0) + '">' + DAY_NAMES[d] + '</button>';
+    }).join('');
+  }
+  function renderPlanRepeatList(){
+    if(!repeats.length){ planRepeatList.innerHTML = ''; return; }
+    var now = Date.now();
+    planRepeatList.innerHTML = '<div class="repeat-list"><div class="installment-label">Repeating</div>' +
+      repeats.map(function(r){
+        var dot = COLORS[r.type] || 'var(--text-dim)';
+        return '<div class="repeat-row"><span class="dot" style="background:' + dot + ';"></span>' +
+          '<span class="repeat-info"><b>' + escapeHtml(LABELS[r.type] || r.type) + '</b> ' +
+          fmtTod(timeOnDay(now, r.from)) + '–' + fmtTod(timeOnDay(now, r.to)) +
+          '<span class="repeat-sub">' + escapeHtml(repeatPhrase(r.days)) + '</span></span>' +
+          '<button type="button" class="undo repeat-stop" data-repeat-stop="' + escapeHtml(r.id) + '">Stop</button></div>';
+      }).join('') + '</div>';
+  }
+  // stops a repeat: no new days get planned, and its blocks that haven't
+  // started yet are removed. Whatever is running or already logged stays.
+  function stopRepeat(id){
+    var now = Date.now();
+    repeats = repeats.filter(function(r){ return r.id !== id; });
+    saveJson('dtk_plan_repeats', repeats);
+    plan = plan.filter(function(b){ return !(b.rep === id && new Date(b.start).getTime() > now); });
+    saveJson('dtk_plan', plan);
+    renderPlanRepeatList();
+    renderPlan();
+    checkNudges();
+  }
+  function setPlanRepeatMode(mode){
+    planRepeatMode = mode;
+    if(mode === 'custom' && !planRepeatDays.length) planRepeatDays = [new Date().getDay()];
+    renderPlanRepeatChips();
+    updatePlanPreview();
+  }
+  function togglePlanDay(d){
+    var i = planRepeatDays.indexOf(d);
+    if(i >= 0){
+      if(planRepeatDays.length === 1) return;        // keep at least one day picked
+      planRepeatDays.splice(i, 1);
+    } else {
+      planRepeatDays.push(d);
+    }
+    renderPlanRepeatChips();
+    updatePlanPreview();
+  }
+
+  function updatePlanPreview(){
+    var range = planRangeFromInputs();
+    if(!range || !planSelectedCategory){ planPreview.textContent = ''; return; }
+    var blocks = buildPlanBlocks(planSelectedCategory, range[0], range[1], planBreakToggle.checked);
+    var workMs = 0, breaks = 0;
+    blocks.forEach(function(b){
+      if(b.kind === 'break') breaks++;
+      else workMs += new Date(b.end).getTime() - new Date(b.start).getTime();
+    });
+    var repDays = repeatDaysFor(planRepeatMode);
+    planPreview.textContent = 'Logs ' + formatHM(workMs) + ' of ' + (LABELS[planSelectedCategory] || planSelectedCategory) +
+      (breaks ? ' · ' + breaks + ' break' + (breaks > 1 ? 's' : '') + ' of ' + BREAK_MIN + ' min' : '') +
+      (repDays.length ? ' · then ' + repeatPhrase(repDays).replace(/^E/, 'e') : '');
+  }
+  function openPlanModal(){
+    planSelectedCategory = timeCategories.length ? timeCategories[0].id : null;
+    if(!planSelectedCategory){ window.alert('Add a category first.'); return; }
+    renderPlanCategoryChips();
+    var d = new Date();
+    d.setMinutes(Math.round(d.getMinutes() / 5) * 5, 0, 0);
+    planStartInput.value = toHHMM(d.getTime());
+    planEndInput.value = '';
+    planBreakToggle.checked = true;
+    planRepeatMode = 'never';
+    planRepeatDays = [];
+    renderPlanRepeatChips();
+    renderPlanRepeatList();
+    updatePlanPreview();
+    planModalOverlay.style.display = 'flex';
+  }
+  function closePlanModal(){
+    planModalOverlay.style.display = 'none';
+  }
+  function savePlanFromModal(){
+    var range = planRangeFromInputs();
+    if(!range){ window.alert('Fill in both times.'); return; }
+    if(range[1] - range[0] > 16*3600*1000){ window.alert('That is longer than 16 hours, check the times.'); return; }
+    var blocks = buildPlanBlocks(planSelectedCategory, range[0], range[1], planBreakToggle.checked);
+    // the new plan replaces any older planned blocks it overlaps
+    plan = plan.filter(function(b){
+      var bs = new Date(b.start).getTime(), be = new Date(b.end).getTime();
+      return be <= range[0] || bs >= range[1];
+    }).concat(blocks);
+    plan.sort(function(a, b){ return new Date(a.start).getTime() - new Date(b.start).getTime(); });
+    saveJson('dtk_plan', plan);
+    // a repeat starts from the next day: today (and yesterday's overnight run)
+    // count as handled, since the blocks above are today's run
+    var repDays = repeatDaysFor(planRepeatMode);
+    if(repDays.length){
+      var yest = new Date(range[0]);
+      yest.setDate(yest.getDate() - 1);
+      var tpl = {
+        id: 'r_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        type: planSelectedCategory, from: planStartInput.value, to: planEndInput.value,
+        breaks: planBreakToggle.checked, days: repDays, done: [dayKey(yest.getTime()), dayKey(range[0])]
+      };
+      repeats = repeats.filter(function(r){ return !(r.type === tpl.type && r.from === tpl.from && r.to === tpl.to); });
+      repeats.push(tpl);
+      saveJson('dtk_plan_repeats', repeats);
+    }
+    syncPlan();
+    historyDirty = true;
+    closePlanModal();
+    renderPlan();
+    render();
+    checkNudges();
+  }
+
+  // ---- catch-up prompts + side quests (one card at a time) ----
+  function lastSessionEnd(now){
+    var best = 0;
+    sessions.forEach(function(s){
+      var e = new Date(s.end).getTime();
+      if(e <= now && e > best) best = e;
+    });
+    return best;
+  }
+  function questType(){
+    for(var i = 0; i < timeCategories.length; i++){
+      if(timeCategories[i].id === 'productive') return 'productive';
+    }
+    return timeCategories.length ? timeCategories[0].id : null;
+  }
+  // least recently done first, and only ones that fit before the next
+  // planned work block. Quiet overnight, and never during a break: not while
+  // a planned break is running, and not for 20 minutes after any timer stops
+  // (that is almost always a walk / eye rest, planned in the app or not).
+  function pickQuest(now){
+    if(!quests.length || new Date(now).getHours() < QUEST_QUIET_UNTIL_HOUR) return null;
+    if(planBreakNow(now) || now - lastSessionEnd(now) < QUEST_BREAK_BUFFER_MS) return null;
+    var freeFor = nextPlanWorkStart(now) - now;
+    function candidates(){
+      return quests.filter(function(q){
+        return q.minutes*MIN_MS <= freeFor && questSkipped.indexOf(q.id) === -1;
+      });
+    }
+    var fits = candidates();
+    if(!fits.length && questSkipped.length){ questSkipped = []; fits = candidates(); }
+    if(!fits.length) return null;
+    fits.sort(function(a, b){
+      return (a.last ? new Date(a.last).getTime() : 0) - (b.last ? new Date(b.last).getTime() : 0);
+    });
+    return fits[0];
+  }
+
+  function nudgeSig(n){
+    if(!n) return 'none';
+    if(n.kind === 'stop') return 'stop|' + (active ? active.start : '');
+    if(n.kind === 'gap') return 'gap|' + n.anchor;
+    if(n.kind === 'quest') return 'quest|' + n.quest.id;
+    return 'done|' + n.quest.id + '|' + n.at;
+  }
+
+  function checkNudges(){
+    syncPlan();
+    var now = Date.now();
+    if(nudge && nudge.kind === 'done' && now - nudge.at < 10*MIN_MS){ renderNudge(); return; }
+    var next = null;
+    if(active){
+      if(!active.quest){
+        var el = now - new Date(active.start).getTime();
+        var limit = active.type === 'sleep' ? SLEEP_STOP_PROMPT_MS : STOP_PROMPT_MS;
+        if(el >= limit && now >= (nudgeState.stopSnoozeUntil || 0)) next = { kind:'stop' };
+      }
+    } else if(!planInProgress(now)){
+      var lastEnd = lastSessionEnd(now);
+      var from = Math.max(lastEnd, now - GAP_LOOKBACK_MS);
+      if(lastEnd > 0 && now - from >= GAP_PROMPT_MS && nudgeState.gapDismissed !== lastEnd){
+        next = { kind:'gap', from:from, to:now, anchor:lastEnd, fromStr:toHHMM(from), toStr:toHHMM(now) };
+      } else if(now >= (nudgeState.questSnoozeUntil || 0)){
+        var q = pickQuest(now);
+        if(q) next = { kind:'quest', quest:{ id:q.id, label:q.label, minutes:q.minutes } };
+      }
+    }
+    // keep the existing card object when nothing changed, so a half-typed time isn't reset
+    if(!(nudge && next && nudgeSig(nudge) === nudgeSig(next))) nudge = next;
+    renderNudge();
+  }
+
+  function renderNudge(){
+    var sig = nudgeSig(nudge);
+    if(sig === nudgeSigShown) return;
+    nudgeSigShown = sig;
+    if(!nudge){
+      nudgeCard.style.display = 'none';
+      nudgeCard.innerHTML = '';
+      return;
+    }
+    var html = '';
+    if(nudge.kind === 'stop' && active){
+      var startMs = new Date(active.start).getTime();
+      html = '<div class="nudge-title">Still on ' + escapeHtml(LABELS[active.type] || active.type) + '?</div>' +
+        '<div class="nudge-sub">Running ' + formatHM(Date.now() - startMs) + ' since ' + fmtTod(startMs) + '. Did you forget to stop it?</div>' +
+        '<div class="nudge-actions">' +
+          '<button type="button" class="nudge-btn primary" data-act="stopNow">Stop now</button>' +
+          '<button type="button" class="nudge-btn" data-act="keep">Still going</button>' +
+        '</div>' +
+        '<div class="nudge-times"><span>It ended at</span><input type="time" id="nudgeStopAt">' +
+          '<button type="button" class="nudge-btn" data-act="stopAt">Stop then</button></div>';
+    } else if(nudge.kind === 'gap'){
+      html = '<div class="nudge-title">Nothing tracked ' + fmtTod(nudge.from) + ' – ' + fmtTod(nudge.to) + '</div>' +
+        '<div class="nudge-sub">That is ' + formatHM(nudge.to - nudge.from) + '. What was it?</div>' +
+        '<div class="nudge-times"><input type="time" id="gapFromInput" value="' + nudge.fromStr + '"><span>to</span>' +
+          '<input type="time" id="gapToInput" value="' + nudge.toStr + '"></div>' +
+        '<div class="nudge-actions">' +
+          timeCategories.map(function(c){
+            return '<button type="button" class="nudge-btn" data-act="gap" data-type="' + c.id + '">' + escapeHtml(c.label) + '</button>';
+          }).join('') +
+          '<button type="button" class="nudge-btn" data-act="gapSkip">Just Other</button>' +
+        '</div>';
+    } else if(nudge.kind === 'quest'){
+      html = '<div class="nudge-title">Free for a bit? Try a side quest</div>' +
+        '<div class="nudge-sub"><b>' + escapeHtml(nudge.quest.label) + '</b> · ' + nudge.quest.minutes + ' min. The timer stops it for you.</div>' +
+        '<div class="nudge-actions">' +
+          '<button type="button" class="nudge-btn primary" data-act="questStart">Start ' + nudge.quest.minutes + ' min</button>' +
+          '<button type="button" class="nudge-btn" data-act="questNext">Another</button>' +
+          '<button type="button" class="nudge-btn" data-act="questLater">Not now</button>' +
+        '</div>';
+    } else if(nudge.kind === 'done'){
+      html = '<div class="nudge-title">Time is up</div>' +
+        '<div class="nudge-sub">Logged ' + nudge.quest.minutes + ' min on <b>' + escapeHtml(nudge.quest.label) + '</b>. Nice. Stop here, or take 15 more?</div>' +
+        '<div class="nudge-actions">' +
+          '<button type="button" class="nudge-btn primary" data-act="dismiss">Done</button>' +
+          '<button type="button" class="nudge-btn" data-act="questMore">+15 min</button>' +
+        '</div>';
+    }
+    nudgeCard.innerHTML = html;
+    nudgeCard.style.display = html ? 'block' : 'none';
+  }
+
+  function stopActiveAt(endMs){
+    if(!active) return;
+    closeActive(new Date(endMs).toISOString());
+    active = null;
+    saveActive(null);
+    historyDirty = true;
+    renderTimeButtons();
+    render();
+    checkNudges();
+  }
+
+  function logGapAs(type){
+    var n = nudge;
+    if(!n || n.kind !== 'gap') return;
+    var fromEl = document.getElementById('gapFromInput');
+    var toEl = document.getElementById('gapToInput');
+    if(!fromEl.value || !toEl.value){ window.alert('Fill in both times.'); return; }
+    var toMs = Date.now();
+    if(toEl.value !== n.toStr) toMs = latestTimeBefore(toEl.value, Date.now());
+    var fromMs = n.from;
+    if(fromEl.value !== n.fromStr) fromMs = latestTimeBefore(fromEl.value, toMs);
+    if(fromMs < n.from){ window.alert('That starts before the untracked time does (' + fmtTod(n.from) + '). Pick a later start.'); return; }
+    if(!(toMs > fromMs)){ window.alert('"To" has to come after "From".'); return; }
+    freeSegments(fromMs, toMs).forEach(function(seg){
+      sessions.push({ type:type, start:new Date(seg[0]).toISOString(), end:new Date(seg[1]).toISOString() });
+    });
+    saveSessions(sessions);
+    historyDirty = true;
+    render();
+    checkNudges();
+  }
+
+  function startQuest(q){
+    var type = questType();
+    if(!type || active) return;
+    active = { type:type, start:new Date().toISOString(), quest:{ id:q.id, label:q.label, limitMs:q.minutes*MIN_MS } };
+    saveActive(active);
+    historyDirty = true;
+    nudge = null;
+    renderTimeButtons();
+    render();
+    checkNudges();
+  }
+
+  // a timed quest ends itself: only the time limit is logged, even if the app
+  // was closed when the time ran out
+  function finishQuest(){
+    if(!active || !active.quest) return;
+    var q = active.quest;
+    var endMs = new Date(active.start).getTime() + q.limitMs;
+    sessions.push({ type:active.type, start:active.start, end:new Date(endMs).toISOString() });
+    markQuestDone(q.id, endMs);
+    saveSessions(sessions);
+    active = null;
+    saveActive(null);
+    historyDirty = true;
+    nudge = { kind:'done', quest:{ id:q.id, label:q.label, minutes:Math.round(q.limitMs/MIN_MS) }, at:Date.now() };
+    renderTimeButtons();
+    render();
+    renderNudge();
+  }
+
+  function handleNudgeAction(act, el){
+    var now = Date.now();
+    if(act === 'endPlan'){
+      if(window.confirm('End the plan here? Time so far stays logged and the rest is cancelled.')) endPlanNow();
+      return;
+    }
+    if(!nudge) return;
+    if(act === 'stopNow'){
+      stopActiveAt(now);
+    } else if(act === 'keep'){
+      nudgeState.stopSnoozeUntil = now + SNOOZE_MS;
+      saveJson('dtk_nudge', nudgeState);
+      nudge = null;
+      renderNudge();
+    } else if(act === 'stopAt'){
+      var v = document.getElementById('nudgeStopAt').value;
+      if(!v){ window.alert('Pick the time it ended.'); return; }
+      var endMs = latestTimeBefore(v, now);
+      if(!active || endMs <= new Date(active.start).getTime()){ window.alert('That is before it started.'); return; }
+      stopActiveAt(endMs);
+    } else if(act === 'gap'){
+      logGapAs(el.getAttribute('data-type'));
+    } else if(act === 'gapSkip'){
+      nudgeState.gapDismissed = nudge.anchor;
+      saveJson('dtk_nudge', nudgeState);
+      nudge = null;
+      checkNudges();
+    } else if(act === 'questStart'){
+      startQuest(nudge.quest);
+    } else if(act === 'questNext'){
+      questSkipped.push(nudge.quest.id);
+      nudge = null;
+      checkNudges();
+    } else if(act === 'questLater'){
+      nudgeState.questSnoozeUntil = now + SNOOZE_MS;
+      saveJson('dtk_nudge', nudgeState);
+      nudge = null;
+      renderNudge();
+    } else if(act === 'questMore'){
+      startQuest({ id:nudge.quest.id, label:nudge.quest.label, minutes:15 });
+    } else if(act === 'dismiss'){
+      nudge = null;
+      checkNudges();
+    }
+  }
+
+  // ---- side quest list ----
+  function renderQuestList(){
+    questList.innerHTML = quests.length ? quests.map(function(q, i){
+      return '<div class="quest-row"><div class="quest-name">' + escapeHtml(q.label) +
+        '<span class="row-note">' + q.minutes + ' min</span></div>' +
+        '<button type="button" class="quest-del" data-act="delQuest" data-qi="' + i + '">✕</button></div>';
+    }).join('') : '<div class="history-empty" style="padding:12px 4px;">No side quests yet.</div>';
+  }
+  function openQuestModal(){
+    renderQuestList();
+    questModalOverlay.style.display = 'flex';
+  }
+  function closeQuestModal(){
+    questModalOverlay.style.display = 'none';
+    checkNudges();
+  }
+  function addQuest(){
+    var name = window.prompt('Side quest name (like "Organize photos"):');
+    if(name === null) return;
+    name = name.trim();
+    if(!name) return;
+    var raw = window.prompt('How many minutes?', '30');
+    if(raw === null) return;
+    var n = parseInt(raw, 10);
+    if(isNaN(n) || n < 5 || n > 180){ window.alert('Pick a number of minutes between 5 and 180.'); return; }
+    quests.push({ id:'q' + Date.now(), label:name, minutes:n, last:null });
+    saveJson('dtk_quests', quests);
+    renderQuestList();
+  }
+  function deleteQuestAt(i){
+    var q = quests[i];
+    if(!q) return;
+    if(!window.confirm('Remove "' + q.label + '"?')) return;
+    quests.splice(i, 1);
+    saveJson('dtk_quests', quests);
+    renderQuestList();
+  }
+
+  // runs every second while the app is open
+  function tick(){
+    var now = Date.now();
+    if(active && active.quest && now - new Date(active.start).getTime() >= active.quest.limitMs){
+      finishQuest();
+      return;
+    }
+    var due = now - lastNudgeCheckAt >= 60*1000;      // re-check the cards about once a minute
+    for(var i = 0; i < plan.length && !due; i++){
+      if(new Date(plan[i].end).getTime() <= now) due = true;   // a planned block just finished
+    }
+    if(due){
+      lastNudgeCheckAt = now;
+      checkNudges();
+    }
+    renderPlan();
+  }
+
+  // delegated clicks: these cards are rebuilt whenever their content changes
+  function actFromEvent(e, container){
+    var el = e.target;
+    while(el && el !== container){
+      if(el.getAttribute && el.getAttribute('data-act')) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  nudgeCard.addEventListener('click', function(e){
+    var el = actFromEvent(e, nudgeCard);
+    if(el) handleNudgeAction(el.getAttribute('data-act'), el);
+  });
+  planCard.addEventListener('click', function(e){
+    var el = actFromEvent(e, planCard);
+    if(el) handleNudgeAction(el.getAttribute('data-act'), el);
+  });
+  questList.addEventListener('click', function(e){
+    var el = actFromEvent(e, questList);
+    if(el && el.getAttribute('data-act') === 'delQuest') deleteQuestAt(Number(el.getAttribute('data-qi')));
+  });
+  planCategoryChips.addEventListener('click', function(e){
+    var el = e.target;
+    while(el && el !== planCategoryChips){
+      if(el.getAttribute && el.getAttribute('data-plan-type')){
+        planSelectedCategory = el.getAttribute('data-plan-type');
+        renderPlanCategoryChips();
+        updatePlanPreview();
+        return;
+      }
+      el = el.parentNode;
+    }
+  });
+
   // ---- three-dot menu: contents change based on which mode is showing ----
   function renderMenuDropdown(){
     var items = [];
     if(mode === 'time'){
+      items.push({ label: 'Plan my day', action: openPlanModal });
+      items.push({ label: 'Side quests', action: openQuestModal });
       items.push({ label: 'Add past entry', action: openManualTimeModal });
       items.push({
         label: editingTime ? 'Done editing categories' : 'Edit categories',
@@ -1546,6 +2497,49 @@
   manualSaveBtn.addEventListener('click', saveManualTimeEntry);
   manualTimeModalOverlay.addEventListener('click', function(e){
     if(e.target === manualTimeModalOverlay) closeManualTimeModal();
+  });
+  planCancelBtn.addEventListener('click', closePlanModal);
+  planSaveBtn.addEventListener('click', savePlanFromModal);
+  planStartInput.addEventListener('input', updatePlanPreview);
+  planStartInput.addEventListener('change', updatePlanPreview);
+  planEndInput.addEventListener('input', updatePlanPreview);
+  planEndInput.addEventListener('change', updatePlanPreview);
+  planBreakToggle.addEventListener('change', updatePlanPreview);
+  function elWithAttr(e, container, attr){
+    var el = e.target;
+    while(el && el !== container){
+      if(el.getAttribute && el.getAttribute(attr) !== null && el.getAttribute(attr) !== undefined) return el;
+      el = el.parentNode;
+    }
+    return null;
+  }
+  planRepeatChips.addEventListener('click', function(e){
+    var el = elWithAttr(e, planRepeatChips, 'data-plan-repeat');
+    if(el) setPlanRepeatMode(el.getAttribute('data-plan-repeat'));
+  });
+  planDayChips.addEventListener('click', function(e){
+    var el = elWithAttr(e, planDayChips, 'data-plan-day');
+    if(el) togglePlanDay(Number(el.getAttribute('data-plan-day')));
+  });
+  planRepeatList.addEventListener('click', function(e){
+    var el = elWithAttr(e, planRepeatList, 'data-repeat-stop');
+    if(el) stopRepeat(el.getAttribute('data-repeat-stop'));
+  });
+  planModalOverlay.addEventListener('click', function(e){
+    if(e.target === planModalOverlay) closePlanModal();
+  });
+  questAddBtn.addEventListener('click', addQuest);
+  questDoneBtn.addEventListener('click', closeQuestModal);
+  questModalOverlay.addEventListener('click', function(e){
+    if(e.target === questModalOverlay) closeQuestModal();
+  });
+  // coming back to the app (Home Screen apps resume rather than reload)
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && mode === 'time'){
+      checkNudges();
+      renderPlan();
+      render();
+    }
   });
   tabToday.addEventListener('click', function(){ currentView = 'today'; render(); });
   tabHistory.addEventListener('click', function(){ currentView = 'history'; historyDirty = true; render(); });
@@ -1605,7 +2599,13 @@
   renderTimeButtons();
   renderMoneyButtons();
 
-  setInterval(function(){ if(mode === 'time') render(); }, 1000);
+  setInterval(function(){
+    tick();
+    if(mode === 'time') render();
+  }, 1000);
+  syncPlan();
+  checkNudges();
+  renderPlan();
   setMode('time');
 })();
 </script>

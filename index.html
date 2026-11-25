@@ -482,6 +482,12 @@
   .td-lb .x{ top:calc(env(safe-area-inset-top,0px) + 12px); right:12px; }
   .td-lb .pv{ left:8px; top:50%; transform:translateY(-50%); }
   .td-lb .nx{ right:8px; top:50%; transform:translateY(-50%); }
+
+  .td-grip{ flex:0 0 32px; align-self:stretch; display:flex; align-items:center; justify-content:center; margin:-12px 0 -12px -12px; border-radius:14px 0 0 14px; color:var(--text-dim); font-size:18px; letter-spacing:-3px; cursor:grab; touch-action:none; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  .td-slot.dragging{ opacity:.45; }
+  .td-ghost{ position:fixed; left:0; top:0; z-index:9999; pointer-events:none; max-width:220px; padding:10px 14px; border-radius:12px; background:#F06595; color:#14121F; font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 8px 24px rgba(0,0,0,.45); }
+  .td-day.drop{ background:#2563c9 !important; color:#fff; transform:scale(1.12); box-shadow:0 0 0 3px #fff; }
+  body.td-dragging{ -webkit-user-select:none; user-select:none; }
 </style>
 </head>
 <body>
@@ -3035,7 +3041,7 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
     tdEl('tdCalMode').textContent = plan ? 'Done so far' : 'To-do';
     tdEl('tdCalMonth').textContent = TODO_MONTHS[todoCalM] + ' ' + todoCalY;
     tdEl('tdLegend').innerHTML = plan
-      ? '<span><i class="td-d" style="background:#2563c9"></i>Planned</span><span>Tap a day to see its plans, or use Plan date on a card.</span>'
+      ? '<span><i class="td-d" style="background:#2563c9"></i>Planned</span><span>Drag a This week card onto a day, or use Plan date on a card.</span>'
       : '<span><i class="td-d" style="background:#F06595"></i>Practiced (Mindset)</span><span><i class="td-d" style="background:#4CC38A"></i>Completed (places, fashion, etc.)</span>';
     var today = todoKey(new Date());
     var html = ['S','M','T','W','T','F','S'].map(function(w){ return '<div class="td-dow">' + w + '</div>'; }).join('');
@@ -3101,6 +3107,7 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
       if(!it){ html += '<div class="td-slot empty">Open slot. Tap Do this week on a card.</div>'; continue; }
       var ph = todoPhotoUrls(it);
       html += '<div class="td-slot" data-id="' + escapeHtml(it.id) + '">' +
+        '<div class="td-grip" data-td-drag="' + escapeHtml(it.id) + '" role="button" aria-label="Drag onto a calendar day to plan it" title="Drag onto a calendar day">⋮⋮</div>' +
         (ph.length ? '<img class="td-slot-img" src="' + ph[0] + '" alt="">' : '') +
         '<div class="td-slot-body"><div class="td-scat">' + escapeHtml(todoWhere(it)) + '</div>' +
         '<div class="td-st">' + escapeHtml(it.title) + '</div>' +
@@ -3459,6 +3466,82 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
   tdEl('tdLbPrev').addEventListener('click', function(e){ e.stopPropagation(); todoLb.idx = (todoLb.idx + todoLb.list.length - 1) % todoLb.list.length; todoLbShow(); });
   tdEl('tdLbNext').addEventListener('click', function(e){ e.stopPropagation(); todoLb.idx = (todoLb.idx + 1) % todoLb.list.length; todoLbShow(); });
   tdEl('tdLightbox').addEventListener('click', function(e){ if(e.target === tdEl('tdLightbox') || e.target === tdEl('tdLbImg')) todoCloseLb(); });
+
+  // ---- drag a This-week card onto a calendar day (touch + mouse) ----
+  var todoDrag = null;
+  function todoDayAt(x, y){
+    var el = document.elementFromPoint(x, y);
+    while(el && el !== document.body){ if(el.getAttribute && el.getAttribute('data-td') === 'day') return el; el = el.parentNode; }
+    return null;
+  }
+  function todoGhostAt(g, x, y){
+    var w = g.offsetWidth || 160;
+    var gx = Math.max(8, Math.min(x - w / 2, window.innerWidth - w - 8));
+    g.style.transform = 'translate(' + gx + 'px,' + (y - 64) + 'px)';
+  }
+  function todoDragMove(e){
+    if(!todoDrag) return;
+    e.preventDefault();
+    todoDrag.x = e.clientX; todoDrag.y = e.clientY;
+    todoGhostAt(todoDrag.ghost, e.clientX, e.clientY);
+    var day = todoDayAt(e.clientX, e.clientY);
+    if(day !== todoDrag.over){
+      if(todoDrag.over) todoDrag.over.classList.remove('drop');
+      todoDrag.over = day;
+      if(day) day.classList.add('drop');
+    }
+  }
+  function todoDragScroll(){
+    if(!todoDrag) return;
+    var y = todoDrag.y, h = window.innerHeight, edge = 80;
+    if(y < edge) window.scrollBy(0, -Math.ceil((edge - y) / 5));
+    else if(y > h - edge) window.scrollBy(0, Math.ceil((y - (h - edge)) / 5));
+    var day = todoDayAt(todoDrag.x, todoDrag.y);
+    if(day !== todoDrag.over){ if(todoDrag.over) todoDrag.over.classList.remove('drop'); todoDrag.over = day; if(day) day.classList.add('drop'); }
+    todoDrag.raf = requestAnimationFrame(todoDragScroll);
+  }
+  function todoDragEnd(e){
+    if(!todoDrag) return;
+    var d = todoDrag; todoDrag = null;
+    cancelAnimationFrame(d.raf);
+    document.removeEventListener('pointermove', todoDragMove);
+    document.removeEventListener('pointerup', todoDragEnd);
+    document.removeEventListener('pointercancel', todoDragEnd);
+    if(d.ghost.parentNode) d.ghost.parentNode.removeChild(d.ghost);
+    if(d.src) d.src.classList.remove('dragging');
+    document.body.classList.remove('td-dragging');
+    var day = e && e.type === 'pointerup' ? todoDayAt(e.clientX, e.clientY) : null;
+    if(d.over) d.over.classList.remove('drop');
+    var it = todoItem(d.id);
+    if(!day || !it){ if(e && e.type === 'pointerup') todoToast('Drop it on a day in the calendar to plan it.'); return; }
+    var key = day.getAttribute('data-v');
+    if(todoPlanDatesOf(it).indexOf(key) >= 0){ todoToast('Already planned for ' + todoPlanLabel(key) + '.'); return; }
+    todoSelDay = key;
+    todoSetPlan(it, key);
+    todoToast('Planned for ' + todoPlanLabel(key) + '.');
+  }
+  function todoDragStart(e, id, src){
+    if(todoDrag || (e.button !== undefined && e.button > 0)) return;
+    var it = todoItem(id); if(!it) return;
+    e.preventDefault();
+    var ghost = document.createElement('div');
+    ghost.className = 'td-ghost';
+    ghost.textContent = it.title;
+    document.body.appendChild(ghost);
+    todoGhostAt(ghost, e.clientX, e.clientY);
+    if(todoCalMode !== 'plan'){ todoCalMode = 'plan'; todoSelDay = null; renderTodoCal(); }
+    todoDrag = { id: id, ghost: ghost, src: src, over: null, x: e.clientX, y: e.clientY, raf: 0 };
+    if(src) src.classList.add('dragging');
+    document.body.classList.add('td-dragging');
+    document.addEventListener('pointermove', todoDragMove, { passive: false });
+    document.addEventListener('pointerup', todoDragEnd);
+    document.addEventListener('pointercancel', todoDragEnd);
+    todoDrag.raf = requestAnimationFrame(todoDragScroll);
+  }
+  tdEl('tdSlots').addEventListener('pointerdown', function(e){
+    var el = e.target;
+    while(el && el !== this){ var id = el.getAttribute && el.getAttribute('data-td-drag'); if(id){ todoDragStart(e, id, el.parentNode); return; } el = el.parentNode; }
+  });
 
   todoLoad();
 

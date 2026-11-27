@@ -465,7 +465,7 @@
   .td-list.compact .td-note, .td-list.compact .td-thumbs, .td-list.compact .td-acts, .td-list.compact .td-info{ display:none; }
   .td-list.compact .td-item{ padding-bottom:4px; }
   .td-empty{ color:var(--text-dim); padding:18px 4px; }
-  .td-toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 16px); z-index:1500; max-width:calc(100% - 32px); background:var(--text); color:var(--bg); padding:11px 16px; border-radius:12px; font-weight:600; font-size:13px; }
+  .td-toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 84px); z-index:1500; max-width:calc(100% - 32px); background:var(--text); color:var(--bg); padding:11px 16px; border-radius:12px; font-weight:600; font-size:13px; }
   .td-toast:empty{ display:none; }
   .td-textarea{ min-height:88px; resize:vertical; font-size:15px; padding:12px 14px; margin-top:10px; line-height:1.4; }
   .td-field-label{ font-size:11px; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.3px; margin:14px 0 8px; }
@@ -488,6 +488,56 @@
   .td-ghost{ position:fixed; left:0; top:0; z-index:9999; pointer-events:none; max-width:220px; padding:10px 14px; border-radius:12px; background:#F06595; color:#14121F; font-weight:700; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 8px 24px rgba(0,0,0,.45); }
   .td-day.drop{ background:#2563c9 !important; color:#fff; transform:scale(1.12); box-shadow:0 0 0 3px #fff; }
   body.td-dragging{ -webkit-user-select:none; user-select:none; }
+  .dl-wrap{ position:relative; display:flex; justify-content:center; }
+  .dl-wrap svg{ width:100%; max-width:300px; height:auto; display:block; }
+  .dl-center{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none; max-width:150px; }
+  .dl-now{ font-size:26px; font-weight:700; letter-spacing:-.3px; font-variant-numeric:tabular-nums; }
+  .dl-what{ font-size:12.5px; margin-top:2px; font-weight:600; }
+  .dl-until{ font-size:12px; color:var(--text-dim); margin-top:1px; }
+  .dl-legend{ display:flex; justify-content:space-around; flex-wrap:wrap; margin-top:14px; gap:10px 8px; }
+  .dl-lg{ display:flex; flex-direction:column; align-items:center; gap:2px; min-width:72px; }
+  .dl-lg .ln{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--text-dim); }
+  .dl-lg .lv{ font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .dl-lg .ls{ font-size:11px; color:var(--text-dim); }
+  .dl-d{ display:block; width:8px; height:8px; border-radius:50%; flex:none; }
+  .dl-key{ display:flex; gap:16px; flex-wrap:wrap; justify-content:center; margin-top:12px; font-size:12px; color:var(--text-dim); }
+  .dl-key span{ display:flex; align-items:center; gap:6px; }
+  .dl-sw{ display:block; width:14px; height:14px; border-radius:3px; flex:none; }
+  .dl-empty{ text-align:center; font-size:13px; color:var(--text-dim); margin-top:12px; line-height:1.45; }
+  .dl-card2{ margin-top:12px; }
+  .dl-phead{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .dl-h2{ font-size:17px; font-weight:700; margin:0; letter-spacing:-.2px; }
+  .dl-psub{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .dl-btn{ min-height:44px; padding:0 14px; border-radius:10px; border:1px solid var(--border); background:transparent; color:var(--text); font:inherit; font-size:13px; font-weight:600; cursor:pointer; -webkit-appearance:none; appearance:none; }
+  .dl-row{ display:grid; grid-template-columns:64px 36px minmax(0,1fr); gap:10px; align-items:center; padding:8px 0; border-top:1px solid var(--border); min-height:60px; }
+  .dl-rows{ margin-top:8px; }
+  .dl-row.now{ background:rgba(255,255,255,.05); margin:0 -10px; padding:8px 10px; border-radius:12px; border-top-color:transparent; }
+  .dl-tm{ display:flex; flex-direction:column; font-size:12.5px; font-weight:600; line-height:1.3; font-variant-numeric:tabular-nums; }
+  .dl-tm .e{ font-weight:500; color:var(--text-dim); }
+  .dl-ic{ width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; }
+  .dl-tt{ font-size:15px; font-weight:600; line-height:1.25; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .dl-ts{ font-size:12px; color:var(--text-dim); margin-top:2px; }
+  .dl-pill{ display:inline-block; font-size:11px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; padding:2px 8px; border-radius:999px; background:#3A2133; color:#F06595; }
+  .dl-bar{ height:4px; border-radius:2px; background:var(--border); margin-top:8px; }
+  .dl-bar i{ display:block; height:100%; border-radius:2px; }
+  .view-tabs{ margin-bottom:16px; }
+  .view-tabs .tab{ min-height:44px; padding:12px; border-radius:12px; background:var(--card); font-size:14px; font-weight:700; }
+  .view-tabs .tab[data-active="true"]{ background:var(--text); color:var(--bg); border-color:var(--text); }
+  #timeSection[data-view="dial"] #timeButtons, #timeSection[data-view="history"] #timeButtons,
+  #timeSection[data-view="dial"] #nudgeCard, #timeSection[data-view="history"] #nudgeCard,
+  #timeSection[data-view="dial"] #planCard, #timeSection[data-view="history"] #planCard{ display:none !important; }
+
+  .mode-tabs{ position:fixed; left:0; right:0; bottom:0; z-index:400; margin:0; display:flex; justify-content:center; gap:0;
+    padding:6px 12px calc(env(safe-area-inset-bottom,0px) + 6px); background:rgba(22,24,29,0.92);
+    -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); border-top:1px solid var(--border); }
+  .mode-tab{ flex:1; max-width:146px; min-height:54px; padding:6px 4px; border:0; border-radius:12px; background:transparent; color:var(--text-dim);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:11.5px; font-weight:600; letter-spacing:.01em; }
+  .mode-tab svg{ width:24px; height:24px; display:block; }
+  .mode-tab[data-active="true"]{ background:transparent; color:var(--text); border-color:transparent; }
+  .mode-tab[data-active="true"] svg{ stroke:var(--text); }
+  .mode-tab[data-active="true"] .nav-dot{ opacity:1; }
+  .nav-dot{ width:4px; height:4px; border-radius:50%; background:var(--text); opacity:0; margin-top:-1px; }
+  .app{ align-self:flex-start; padding-bottom:calc(env(safe-area-inset-bottom,0px) + 80px); }
 </style>
 </head>
 <body>
@@ -503,13 +553,18 @@
     </div>
   </div>
 
-  <div class="mode-tabs">
-    <button class="mode-tab" id="modeTimeBtn" data-active="true">Time</button>
-    <button class="mode-tab" id="modeMoneyBtn" data-active="false">Money</button>
-    <button class="mode-tab" id="modeTodoBtn" data-active="false">To Do</button>
-  </div>
+  <nav class="mode-tabs" aria-label="Sections">
+    <button class="mode-tab" id="modeTimeBtn" data-active="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>Time</span><i class="nav-dot"></i></button>
+    <button class="mode-tab" id="modeMoneyBtn" data-active="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M16 14.5h2"/></svg><span>Money</span><i class="nav-dot"></i></button>
+    <button class="mode-tab" id="modeTodoBtn" data-active="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><path d="M3.5 6.5l1.2 1.2 2-2.2M3.5 12l1.2 1.2 2-2.2M3.5 17.5l1.2 1.2 2-2.2"/></svg><span>To Do</span><i class="nav-dot"></i></button>
+  </nav>
 
-  <div id="timeSection">
+  <div id="timeSection" data-view="today">
+    <div class="tabs view-tabs" role="tablist" aria-label="Time views">
+      <button class="tab" id="tabToday" data-active="true">Today</button>
+      <button class="tab" id="tabDial" data-active="false">Day dial</button>
+      <button class="tab" id="tabHistory" data-active="false">History</button>
+    </div>
     <div class="buttons" id="timeButtons"></div>
 
     <div class="status-row">
@@ -520,17 +575,15 @@
     <div class="nudge-card" id="nudgeCard" style="display:none;"></div>
     <div class="plan-card" id="planCard" style="display:none;"></div>
 
-    <div class="tabs">
-      <button class="tab" id="tabToday" data-active="true">Today</button>
-      <button class="tab" id="tabHistory" data-active="false">History</button>
-    </div>
-
     <div class="card" id="todayCard">
       <div class="chart-wrap">
         <svg id="pie" viewBox="0 0 200 200" width="220" height="220"></svg>
       </div>
       <div class="legend" id="legend"></div>
     </div>
+
+    <div class="card" id="dialCard" style="display:none;"></div>
+    <div class="card dl-card2" id="dialListCard" style="display:none;"></div>
 
     <div class="card" id="historyCard" style="display:none;">
       <div id="historyBody"></div>
@@ -922,7 +975,8 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
   syncMoneyCategoryLookups();
   syncTimeCategoryLookups();
   var mode = 'time';
-  var currentView = 'today';
+  var currentView = (function(){ try{ var v = localStorage.getItem('dtk_time_view'); return v === 'dial' || v === 'history' ? v : 'today'; }catch(e){ return 'today'; } })();
+  function saveTimeView(){ try{ localStorage.setItem('dtk_time_view', currentView); }catch(e){} }
   var viewMonth = null;
   var viewMonthMoney = null;
   var historyDirty = true;
@@ -1179,6 +1233,9 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
   var tabHistory = document.getElementById('tabHistory');
   var todayCard = document.getElementById('todayCard');
   var historyCard = document.getElementById('historyCard');
+  var tabDial = document.getElementById('tabDial');
+  var dialCard = document.getElementById('dialCard');
+  var dialListCard = document.getElementById('dialListCard');
   var historyBody = document.getElementById('historyBody');
   var modeTimeBtn = document.getElementById('modeTimeBtn');
   var modeMoneyBtn = document.getElementById('modeMoneyBtn');
@@ -1401,8 +1458,13 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
 
     tabToday.setAttribute('data-active', String(currentView === 'today'));
     tabHistory.setAttribute('data-active', String(currentView === 'history'));
+    tabDial.setAttribute('data-active', String(currentView === 'dial'));
+    timeSection.setAttribute('data-view', currentView);
     todayCard.style.display = currentView === 'today' ? 'block' : 'none';
     historyCard.style.display = currentView === 'history' ? 'block' : 'none';
+    dialCard.style.display = currentView === 'dial' ? 'block' : 'none';
+    dialListCard.style.display = currentView === 'dial' ? 'block' : 'none';
+    if(currentView === 'dial'){ renderDial(); return; }
 
     if(currentView === 'history'){
       if(historyDirty){ historyDirty = false; renderHistory(); }
@@ -1905,6 +1967,12 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
   }
 
   var plan = loadJson('dtk_plan', []);
+  // finished walk breaks from the plan, kept ~2 days so the day dial can draw them
+  var breaksLog = (function(){
+    var a = loadJson('dtk_breaks', []);
+    if(!Array.isArray(a)) return [];
+    return a.filter(function(b){ return b && typeof b.start === 'string' && typeof b.end === 'string' && !isNaN(new Date(b.start).getTime()) && new Date(b.end).getTime() > new Date(b.start).getTime(); });
+  })();
   if(!Array.isArray(plan)) plan = [];
 
   // Repeating plans: small templates {id,type,from,to,breaks,days,done}. Each
@@ -2089,6 +2157,10 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
       var end = new Date(b.end).getTime();
       if(end > now){ keep.push(b); return; }
       changed = true;
+      if(b.kind === 'break'){
+        var bs = Math.max(new Date(b.start).getTime(), now - 3*3600*1000);
+        if(end > bs) breaksLog.push({ start:new Date(bs).toISOString(), end:b.end });
+      }
       if(b.kind === 'work'){
         var start = new Date(b.start).getTime();
         freeSegments(start, end).forEach(function(seg){
@@ -2098,6 +2170,9 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
     });
     if(changed){
       plan = keep;
+      var cutoff = startOfToday() - 24*3600*1000;
+      breaksLog = breaksLog.filter(function(x){ return new Date(x.end).getTime() > cutoff; });
+      saveJson('dtk_breaks', breaksLog);
       saveJson('dtk_plan', plan);
       saveSessions(sessions);
       historyDirty = true;
@@ -2754,8 +2829,8 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
       renderTodo();
     }
   });
-  tabToday.addEventListener('click', function(){ currentView = 'today'; render(); });
-  tabHistory.addEventListener('click', function(){ currentView = 'history'; historyDirty = true; render(); });
+  tabToday.addEventListener('click', function(){ currentView = 'today'; saveTimeView(); render(); });
+  tabHistory.addEventListener('click', function(){ currentView = 'history'; saveTimeView(); historyDirty = true; render(); });
 
   undoExpenseBtn.addEventListener('click', undoLastExpense);
   moneyBudgetLine.addEventListener('click', openMoneyBudgetPrompt);
@@ -3544,6 +3619,175 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
   });
 
   todoLoad();
+
+  // ---- Day dial: today on a 24-hour clock (midnight at the top) ----
+  // Solid = logged (sessions + finished breaks), striped = still planned.
+  var DIAL_BREAK_COLOR = '#4CC38A';
+  var dialSig = '';
+  function dialDur(ms){ var m = Math.max(0, Math.round(ms / 60000)), h = Math.floor(m / 60); m = m % 60; return h ? h + 'h' + (m ? ' ' + m + 'm' : '') : m + 'm'; }
+  function dialAngle(ms, t0){ return (ms - t0) / 86400000 * 2 * Math.PI; }
+  function dialPt(a, r){ return [150 + r * Math.sin(a), 150 - r * Math.cos(a)]; }
+  function dialArc(a0, a1, r){
+    if(a1 - a0 >= 2 * Math.PI - 1e-6){ return dialArc(a0, a0 + Math.PI, r) + ' ' + dialArc(a0 + Math.PI, a1 - 1e-4, r); }
+    var p = dialPt(a0, r), q = dialPt(a1, r);
+    return 'M' + p[0].toFixed(2) + ' ' + p[1].toFixed(2) + 'A' + r + ' ' + r + ' 0 ' + (a1 - a0 > Math.PI ? 1 : 0) + ' 1 ' + q[0].toFixed(2) + ' ' + q[1].toFixed(2);
+  }
+  function dialColor(type){ return type === 'break' ? DIAL_BREAK_COLOR : (COLORS[type] || '#8B909C'); }
+  function dialLabel(type){ return type === 'break' ? 'Walk break' : (LABELS[type] || type); }
+  // Everything on today's clock, as {type, s, e, state:'logged'|'now'|'planned'}
+  function dialItems(now){
+    var t0 = startOfToday(), t1 = t0 + 86400000, out = [];
+    function add(type, s, e, state){
+      s = Math.max(s, t0); e = Math.min(e, t1);
+      if(e > s) out.push({ type:type, s:s, e:e, state:state });
+    }
+    sessions.forEach(function(x){ add(x.type, new Date(x.start).getTime(), new Date(x.end).getTime(), 'logged'); });
+    breaksLog.forEach(function(b){ add('break', new Date(b.start).getTime(), new Date(b.end).getTime(), 'logged'); });
+    if(active) add(active.type, new Date(active.start).getTime(), now, 'now');
+    plan.forEach(function(b){
+      var s = new Date(b.start).getTime(), e = new Date(b.end).getTime(), type = b.kind === 'break' ? 'break' : b.type;
+      if(s < now && e > now){
+        if(!active) add(type, s, now, 'now');           // running block: first part counts as happening
+        add(type, Math.max(s, now), e, 'planned');
+      } else add(type, s, e, 'planned');
+    });
+    out.sort(function(a, b){ return a.s - b.s || a.e - b.e; });
+    return out;
+  }
+  function dialPattern(id, color){
+    return '<pattern id="' + id + '" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+      '<rect width="7" height="7" fill="' + color + '" fill-opacity=".16"/><line x1="0" y1="0" x2="0" y2="7" stroke="' + color + '" stroke-width="3"/></pattern>';
+  }
+  function dialSvg(items, now){
+    var t0 = startOfToday(), defs = '', arcs = '', pats = {}, i;
+    items.forEach(function(it){
+      var col = dialColor(it.type), stroke = col;
+      if(it.state === 'planned'){
+        var pid = 'dlp' + String(col).replace(/[^a-zA-Z0-9]/g, '');
+        if(!pats[pid]){ pats[pid] = 1; defs += dialPattern(pid, col); }
+        stroke = 'url(#' + pid + ')';
+      }
+      arcs += '<path d="' + dialArc(dialAngle(it.s, t0), dialAngle(it.e, t0), 98) + '" stroke="' + stroke + '"/>';
+    });
+    var ticks = '';
+    for(i = 0; i < 24; i++){
+      if(i === 6 || i === 18) continue;            // the 6 AM / 6 PM labels sit there
+      var a = i / 24 * 2 * Math.PI, p = dialPt(a, 116), q = dialPt(a, i % 6 ? 120 : 124);
+      ticks += 'M' + p[0].toFixed(2) + ' ' + p[1].toFixed(2) + 'L' + q[0].toFixed(2) + ' ' + q[1].toFixed(2);
+    }
+    var na = dialAngle(now, t0), h0 = dialPt(na, 62), h1 = dialPt(na, 122);
+    var spoken = items.filter(function(it){ return it.state !== 'planned'; }).length + ' logged, ' +
+      items.filter(function(it){ return it.state === 'planned'; }).length + ' planned';
+    return '<svg viewBox="0 0 300 300" role="img" aria-label="24-hour day dial, midnight at the top: ' + spoken + '">' +
+      '<defs>' + defs + '</defs>' +
+      '<circle cx="150" cy="150" r="98" fill="none" stroke="var(--border)" stroke-width="32"/>' +
+      '<g fill="none" stroke-width="32">' + arcs + '</g>' +
+      '<path d="' + ticks + '" stroke="#7A7F8C" stroke-width="1.5" fill="none"/>' +
+      '<g font-size="10.5" fill="#A9AEBB" text-anchor="middle" font-family="inherit" aria-hidden="true">' +
+      '<text x="150" y="16">12 AM</text><text x="279" y="154">6 AM</text><text x="150" y="294">12 PM</text><text x="21" y="154">6 PM</text></g>' +
+      '<line x1="' + h0[0].toFixed(2) + '" y1="' + h0[1].toFixed(2) + '" x2="' + h1[0].toFixed(2) + '" y2="' + h1[1].toFixed(2) + '" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round"/>' +
+      '<circle cx="' + h1[0].toFixed(2) + '" cy="' + h1[1].toFixed(2) + '" r="4.5" fill="var(--text)"/></svg>';
+  }
+  var DIAL_ICONS = {
+    work: '<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>',
+    sleep: '<path d="M20 14.5A8 8 0 1 1 9.5 4 6.5 6.5 0 0 0 20 14.5z"/>',
+    'break': '<circle cx="13" cy="4" r="1.8"/><path d="M11 21l2-6-2-2 1-5M8 11l3-3 3 1 3 3M15 15l2 6"/>',
+    other: '<circle cx="12" cy="12" r="6"/>'
+  };
+  function dialIcon(type){
+    return '<span class="dl-ic" style="background:' + dialColor(type) + '"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#14121F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      (DIAL_ICONS[type] || DIAL_ICONS.other) + '</svg></span>';
+  }
+  // Rows for the list: neighbouring pieces of the same thing are joined
+  function dialRows(items, now){
+    var rows = [];
+    items.forEach(function(it){
+      var last = rows[rows.length - 1];
+      if(last && last.type === it.type && Math.abs(last.e - it.s) < 60000 && (last.state === it.state || (last.state === 'now' && it.state === 'planned'))){
+        last.e = Math.max(last.e, it.e);
+        if(it.state === 'planned' && last.state === 'now') last.split = it.s;
+        return;
+      }
+      rows.push({ type:it.type, s:it.s, e:it.e, state:it.state });
+    });
+    return rows;
+  }
+  function renderDial(force){
+    var now = Date.now();
+    var sig = Math.floor(now / 30000) + '|' + sessions.length + '|' + plan.length + '|' + breaksLog.length + '|' + (active ? active.type + active.start : '') + '|' + timeCategories.length;
+    if(!force && sig === dialSig) return;
+    dialSig = sig;
+    var items = dialItems(now);
+    // center text
+    var what = 'Nothing running', until = '', whatColor = 'var(--text-dim)';
+    var pb = currentPlanBlock();
+    if(active){
+      what = LABELS[active.type] || active.type; whatColor = dialColor(active.type);
+      until = 'running ' + dialDur(now - new Date(active.start).getTime());
+    } else if(pb){
+      var t = pb.kind === 'break' ? 'break' : pb.type;
+      what = dialLabel(t); whatColor = dialColor(t);
+      until = 'until ' + fmtTod(new Date(pb.end).getTime());
+    } else {
+      var next = items.filter(function(it){ return it.state === 'planned' && it.s > now; })[0];
+      if(next){ what = 'Next: ' + dialLabel(next.type); until = 'at ' + fmtTod(next.s); }
+    }
+    var html = '<div class="dl-wrap">' + dialSvg(items, now) +
+      '<div class="dl-center"><span class="dl-now">' + escapeHtml(fmtTod(now)) + '</span>' +
+      '<span class="dl-what" style="color:' + whatColor + '">' + escapeHtml(what) + '</span>' +
+      (until ? '<span class="dl-until">' + escapeHtml(until) + '</span>' : '') + '</div></div>';
+    // legend: logged so far, and the day's total if more is planned
+    var logged = {}, planned = {}, order = [];
+    items.forEach(function(it){
+      if(order.indexOf(it.type) < 0) order.push(it.type);
+      var ms = it.e - it.s;
+      if(it.state === 'planned') planned[it.type] = (planned[it.type] || 0) + ms;
+      else logged[it.type] = (logged[it.type] || 0) + ms;
+    });
+    var cats = timeCategories.map(function(c){ return c.id; }).filter(function(id){ return order.indexOf(id) >= 0; });
+    if(order.indexOf('break') >= 0) cats.push('break');
+    order.forEach(function(id){ if(cats.indexOf(id) < 0) cats.push(id); });
+    if(cats.length){
+      html += '<div class="dl-legend">' + cats.map(function(id){
+        var l = logged[id] || 0, p = planned[id] || 0;
+        return '<div class="dl-lg"><span class="ln"><i class="dl-d" style="background:' + dialColor(id) + '"></i>' + escapeHtml(dialLabel(id)) + '</span>' +
+          '<span class="lv">' + dialDur(l) + '</span><span class="ls">' + (p ? 'of ' + dialDur(l + p) : 'so far') + '</span></div>';
+      }).join('') + '</div>' +
+        '<div class="dl-key"><span><i class="dl-sw" style="background:#A9AEBB"></i>Logged</span>' +
+        '<span><i class="dl-sw" style="background:repeating-linear-gradient(45deg,#A9AEBB 0 2px,var(--border) 2px 5px)"></i>Planned</span>' +
+        '<span><i class="dl-sw" style="background:var(--text);width:3px;border-radius:2px"></i>Now</span></div>';
+    } else {
+      html += '<div class="dl-empty">Nothing on today\'s clock yet. Start a timer from Today, or plan your day below.</div>';
+    }
+    dialCard.innerHTML = html;
+    // today's list
+    var rows = dialRows(items, now);
+    var list = '<div class="dl-phead"><div><h2 class="dl-h2">Today\'s plan</h2><div class="dl-psub">Plan my day + what you logged</div></div>' +
+      '<button type="button" class="dl-btn" id="dialPlanBtn">Plan my day</button></div>';
+    if(!rows.length){
+      list += '<div class="dl-empty">No plan yet for today.</div>';
+    } else {
+      list += '<div class="dl-rows">' + rows.map(function(r){
+        var dur = r.e - r.s, sub, isNow = r.state === 'now', bar = '';
+        if(isNow){
+          var done = (r.split || now) - r.s;
+          sub = dialDur(done) + (r.split ? ' of ' + dialDur(dur) + ' so far' : ' so far');
+          if(r.split) bar = '<div class="dl-bar"><i style="width:' + Math.min(100, Math.round(done / dur * 100)) + '%;background:' + dialColor(r.type) + '"></i></div>';
+        } else {
+          sub = dialDur(dur) + ' · ' + (r.state === 'logged' ? 'logged' : 'planned');
+        }
+        return '<div class="dl-row' + (isNow ? ' now' : '') + '"><div class="dl-tm"><span>' + escapeHtml(fmtTod(r.s)) + '</span><span class="e">' + escapeHtml(fmtTod(r.e)) + '</span></div>' +
+          dialIcon(r.type) + '<div><div class="dl-tt">' + escapeHtml(dialLabel(r.type)) + (isNow ? '<span class="dl-pill">Now</span>' : '') + '</div>' +
+          '<div class="dl-ts">' + escapeHtml(sub) + '</div>' + bar + '</div></div>';
+      }).join('') + '</div>';
+    }
+    dialListCard.innerHTML = list;
+  }
+  dialListCard.addEventListener('click', function(e){
+    var el = e.target;
+    while(el && el !== dialListCard){ if(el.id === 'dialPlanBtn'){ openPlanModal(); return; } el = el.parentNode; }
+  });
+  tabDial.addEventListener('click', function(){ currentView = 'dial'; saveTimeView(); renderDial(true); render(); });
 
   viewMonth = currentMonthKey();
   viewMonthMoney = currentMonthKey();

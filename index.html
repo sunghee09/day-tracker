@@ -538,6 +538,13 @@
   .mode-tab[data-active="true"] .nav-dot{ opacity:1; }
   .nav-dot{ width:4px; height:4px; border-radius:50%; background:var(--text); opacity:0; margin-top:-1px; }
   .app{ align-self:flex-start; padding-bottom:calc(env(safe-area-inset-bottom,0px) + 80px); }
+  .cl-p{ font-size:13px; color:var(--text-dim); line-height:1.45; margin:0 0 12px; }
+  .cl-p b{ color:var(--text); font-weight:600; word-break:break-all; }
+  .cl-status{ min-height:20px; font-size:13px; margin-top:10px; color:var(--text-dim); line-height:1.4; }
+  .cl-status.ok{ color:#4CC38A; } .cl-status.err{ color:#F0807A; }
+  .cl-link{ display:block; width:100%; min-height:44px; margin-top:8px; background:transparent; border:0; color:var(--text-dim); font:inherit; font-size:13px; font-weight:600; cursor:pointer; text-decoration:underline; }
+  .cl-toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(env(safe-area-inset-bottom,0px) + 84px); z-index:1500; max-width:calc(100% - 32px); background:var(--text); color:var(--bg); padding:11px 16px; border-radius:12px; font-weight:600; font-size:13px; }
+  .cl-toast:empty{ display:none; }
 </style>
 </head>
 <body>
@@ -694,6 +701,22 @@
   </div>
   <div class="td-toast" id="tdToast" role="status"></div>
 
+  <div class="modal-overlay" id="clModalOverlay" style="display:none;">
+    <div class="modal-box" style="max-height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch;">
+      <div class="modal-title">Connect Claude</div>
+      <p class="cl-p">Paste your app link from the setup steps. It looks like <b>https://…workers.dev/…</b> (without <b>/mcp</b> at the end).</p>
+      <label class="installment-label" for="clUrlInput" style="display:block;">App link</label>
+      <input class="modal-input" id="clUrlInput" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://time-is-money.you.workers.dev/…">
+      <div class="cl-status" id="clStatus" role="status"></div>
+      <div class="modal-actions">
+        <button class="modal-btn-secondary" id="clCancelBtn">Cancel</button>
+        <button class="modal-btn-primary" id="clSaveBtn">Connect</button>
+      </div>
+      <button type="button" class="cl-link" id="clDisconnectBtn" style="display:none;">Disconnect</button>
+    </div>
+  </div>
+  <div class="cl-toast" id="clToast" role="status" aria-live="polite"></div>
+
   <div class="modal-overlay" id="expenseModalOverlay" style="display:none;">
     <div class="modal-box">
       <div class="modal-title" id="expenseModalTitle">Category</div>
@@ -781,7 +804,7 @@
 
       <label class="installment-toggle">
         <input type="checkbox" id="planBreakToggle" checked>
-        15-min break after each hour
+        10-min walk break after each hour
       </label>
 
       <div class="installment-label" style="margin-top:16px;">Repeat</div>
@@ -1941,7 +1964,7 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
   // while it's closed, so everything here is worked out when the app opens,
   // comes back to the front, or ticks while open.
   var MIN_MS = 60000;
-  var BREAK_MIN = 15;
+  var BREAK_MIN = 10;
   var WORK_BLOCK_MIN = 60;
   var STOP_PROMPT_MS = 4*3600*1000;          // "still going?" after this long
   var SLEEP_STOP_PROMPT_MS = 12*3600*1000;   // Sleep is allowed to run longer
@@ -2724,6 +2747,7 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
       items.push({ label: 'Plan my day', action: openPlanModal });
       items.push({ label: 'Side quests', action: openQuestModal });
       items.push({ label: 'Add past entry', action: openManualTimeModal });
+      items.push({ label: clBase ? 'Claude: connected' : 'Connect Claude', action: openCloudModal });
       items.push({
         label: editingTime ? 'Done editing categories' : 'Edit categories',
         action: function(){ editingTime = !editingTime; renderTimeButtons(); }
@@ -3788,6 +3812,144 @@ window.TODO_PHOTOS={"img/atteut-1.jpg":"data:image/jpeg;base64,/9j/4AAQSkZJRgABA
     while(el && el !== dialListCard){ if(el.id === 'dialPlanBtn'){ openPlanModal(); return; } el = el.parentNode; }
   });
   tabDial.addEventListener('click', function(){ currentView = 'dial'; saveTimeView(); renderDial(true); render(); });
+
+  // ---- Claude connector sync ----
+  // Pulls plan changes Claude made (through the Cloudflare connector) and
+  // reports today's logged time + plan back, so Claude can see the day.
+  var CL_URL_KEY = 'dtk_cloud_url', CL_SEQ_KEY = 'dtk_cloud_seq';
+  var clBase = (function(){ try{ return clNormalize(localStorage.getItem(CL_URL_KEY) || ''); }catch(e){ return ''; } })();
+  var clSeq = (function(){ try{ return Number(localStorage.getItem(CL_SEQ_KEY)) || 0; }catch(e){ return 0; } })();
+  var clBusy = false, clPushTimer = null, clToastTimer = null, clLastOk = 0;
+  function clNormalize(u){
+    u = String(u || '').trim().replace(/\s+/g, '');
+    if(!/^https?:\/\/[^\s/]+\/[A-Za-z0-9_-]{8,}/.test(u)) return '';
+    return u.replace(/\/+$/, '').replace(/\/mcp$/, '').replace(/\/api\/ping$/, '');
+  }
+  function clToast(msg){
+    var el = document.getElementById('clToast');
+    el.textContent = msg;
+    clearTimeout(clToastTimer);
+    clToastTimer = setTimeout(function(){ el.textContent = ''; }, 3500);
+  }
+  function clApply(ops){
+    var now = Date.now(), changed = false, added = [];
+    ops.sort(function(a, b){ return a.seq - b.seq; }).forEach(function(op){
+      if(op && op.seq > clSeq) clSeq = op.seq;
+      if(!op || op.kind !== 'set') return;
+      var from = new Date(op.from).getTime(), to = new Date(op.to).getTime();
+      if(isNaN(from) || isNaN(to) || to < now - 24*3600*1000) return;            // too old to matter
+      plan = plan.filter(function(b){
+        var s = new Date(b.start).getTime(), e = new Date(b.end).getTime();
+        return !(s < to && e > from);                                           // Claude's new plan replaces that range
+      });
+      (op.blocks || []).forEach(function(b){
+        var s = new Date(b.start).getTime(), e = new Date(b.end).getTime();
+        if(isNaN(s) || e <= s) return;
+        if(b.kind === 'break'){ plan.push({ kind:'break', start:b.start, end:b.end }); return; }
+        if(!timeCategories.some(function(c){ return c.id === b.type; })) return;
+        plan.push({ kind:'work', type:b.type, start:b.start, end:b.end });
+        added.push(b);
+      });
+      changed = true;
+    });
+    try{ localStorage.setItem(CL_SEQ_KEY, String(clSeq)); }catch(e){}
+    if(!changed) return;
+    plan.sort(function(a, b){ return new Date(a.start) - new Date(b.start); });
+    saveJson('dtk_plan', plan);
+    syncPlan();
+    historyDirty = true;
+    renderPlan();
+    if(mode === 'time') render();
+    if(typeof renderDial === 'function' && currentView === 'dial') renderDial(true);
+    checkNudges();
+    if(added.length){
+      var s0 = Math.min.apply(null, added.map(function(b){ return new Date(b.start).getTime(); }));
+      var e0 = Math.max.apply(null, added.map(function(b){ return new Date(b.end).getTime(); }));
+      clToast('Claude planned ' + (LABELS[added[0].type] || added[0].type) + ' ' + fmtTod(s0) + '–' + fmtTod(e0));
+    } else clToast('Claude updated your plan');
+  }
+  function clSnapshot(){
+    var cut = Date.now() - 2*24*3600*1000;
+    return {
+      appliedSeq: clSeq,
+      categories: timeCategories.map(function(c){ return { id:c.id, label:c.label }; }),
+      sessions: sessions.filter(function(s){ return new Date(s.end).getTime() > cut; }).map(function(s){ return { type:s.type, start:s.start, end:s.end }; }),
+      plan: plan.map(function(b){ return { kind:b.kind, type:b.type, start:b.start, end:b.end }; }),
+      active: active ? { type:active.type, start:active.start } : null
+    };
+  }
+  function clPush(){
+    if(!clBase) return Promise.resolve();
+    return fetch(clBase + '/api/snapshot', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(clSnapshot()) }).catch(function(){});
+  }
+  function clPushSoon(){
+    if(!clBase) return;
+    clearTimeout(clPushTimer);
+    clPushTimer = setTimeout(clPush, 2500);
+  }
+  function clSync(force){
+    if(!clBase || clBusy) return Promise.resolve(false);
+    if(document.hidden && !force) return Promise.resolve(false);
+    clBusy = true;
+    return fetch(clBase + '/api/ops?after=' + clSeq, { cache:'no-store' })
+      .then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function(d){
+        if(typeof d.seq === 'number' && d.seq < clSeq){ clSeq = 0; }              // a fresh connector: start over
+        clApply(Array.isArray(d.ops) ? d.ops : []);
+        clLastOk = Date.now();
+        return clPush().then(function(){ return true; });
+      })
+      .catch(function(){ return false; })
+      .then(function(ok){ clBusy = false; return ok; });
+  }
+  // tell Claude about changes made in the app, a moment after they happen
+  var clOrigSaveSessions = saveSessions, clOrigSaveActive = saveActive, clOrigSaveJson = saveJson;
+  saveSessions = function(a){ clOrigSaveSessions(a); clPushSoon(); };
+  saveActive = function(a){ clOrigSaveActive(a); clPushSoon(); };
+  saveJson = function(k, v){ clOrigSaveJson(k, v); if(k === 'dtk_plan') clPushSoon(); };
+
+  function openCloudModal(){
+    document.getElementById('clUrlInput').value = clBase;
+    var st = document.getElementById('clStatus');
+    st.className = 'cl-status';
+    st.textContent = clBase ? (clLastOk ? 'Connected. Last synced ' + fmtTod(clLastOk) + '.' : 'Connected.') : '';
+    document.getElementById('clDisconnectBtn').style.display = clBase ? 'block' : 'none';
+    document.getElementById('clModalOverlay').style.display = 'flex';
+  }
+  function closeCloudModal(){ document.getElementById('clModalOverlay').style.display = 'none'; }
+  document.getElementById('clCancelBtn').addEventListener('click', closeCloudModal);
+  document.getElementById('clSaveBtn').addEventListener('click', function(){
+    var st = document.getElementById('clStatus');
+    var u = clNormalize(document.getElementById('clUrlInput').value);
+    if(!u){ st.className = 'cl-status err'; st.textContent = 'That doesn\'t look like the app link. It should start with https:// and include the long secret part.'; return; }
+    st.className = 'cl-status'; st.textContent = 'Checking…';
+    fetch(u + '/api/ping', { cache:'no-store' })
+      .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+      .then(function(res){
+        if(!res.ok || !res.j || res.j.app !== 'time-is-money') throw new Error(res.j && res.j.error ? res.j.error : 'not the connector');
+        if(u !== clBase){ clSeq = 0; try{ localStorage.setItem(CL_SEQ_KEY, '0'); }catch(e){} }
+        clBase = u;
+        try{ localStorage.setItem(CL_URL_KEY, u); }catch(e){}
+        st.className = 'cl-status ok'; st.textContent = 'Connected.';
+        return clSync(true).then(function(){ closeCloudModal(); clToast('Claude is connected'); });
+      })
+      .catch(function(e){
+        st.className = 'cl-status err';
+        st.textContent = 'Couldn\'t reach it' + (e && e.message && e.message !== 'Failed to fetch' ? ' (' + e.message + ')' : '') + '. Check the link and that the Worker is deployed.';
+      });
+  });
+  document.getElementById('clDisconnectBtn').addEventListener('click', function(){
+    clBase = '';
+    try{ localStorage.removeItem(CL_URL_KEY); }catch(e){}
+    closeCloudModal();
+    clToast('Disconnected from Claude');
+  });
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden) clSync(true);
+    else clPush();
+  });
+  setInterval(function(){ clSync(false); }, 60000);
+  setTimeout(function(){ clSync(true); }, 600);
 
   viewMonth = currentMonthKey();
   viewMonthMoney = currentMonthKey();
